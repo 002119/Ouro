@@ -1,0 +1,128 @@
+<Window x:Class="Ouro.Views.ClipOverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Ouro Clip Overlay"
+        Width="420" Height="158"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowActivated="False"
+        Focusable="False"
+        ShowInTaskbar="False"
+        IsHitTestVisible="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual">
+    <Window.Resources>
+        <Storyboard x:Key="FadeInOutAnimation">
+            <!-- 1. Entrance: Slide in from right with smooth cubic ease -->
+            <DoubleAnimation Storyboard.TargetName="RootGrid"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0.0" To="1.0" Duration="0:0:0.25" />
+            <DoubleAnimation Storyboard.TargetName="RootTranslate"
+                             Storyboard.TargetProperty="X"
+                             From="60" To="0" Duration="0:0:0.32">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut" />
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+
+            <!-- 2. Cyber Laser Shine Sweep across the banner -->
+            <DoubleAnimation Storyboard.TargetName="LaserTranslate"
+                             Storyboard.TargetProperty="X"
+                             From="-150" To="480" BeginTime="0:0:0.1" Duration="0:0:0.85">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseOut" />
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+            <DoubleAnimation Storyboard.TargetName="LaserShine"
+                             Storyboard.TargetProperty="Opacity"
+                             From="0.0" To="0.8" BeginTime="0:0:0.1" Duration="0:0:0.18" AutoReverse="True" />
+
+            <!-- 3. Exit: Smooth glide-out and fade after 2.9 seconds -->
+            <DoubleAnimation Storyboard.TargetName="RootGrid"
+                             Storyboard.TargetProperty="Opacity"
+                             From="1.0" To="0.0" BeginTime="0:0:3.0" Duration="0:0:0.35" />
+            <DoubleAnimation Storyboard.TargetName="RootTranslate"
+                             Storyboard.TargetProperty="X"
+                             From="0" To="45" BeginTime="0:0:3.0" Duration="0:0:0.35">
+                <DoubleAnimation.EasingFunction>
+                    <CubicEase EasingMode="EaseIn" />
+                </DoubleAnimation.EasingFunction>
+            </DoubleAnimation>
+        </Storyboard>
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid" Margin="8" Opacity="0">
+        <Grid.RenderTransform>
+            <TranslateTransform x:Name="RootTranslate" X="60" Y="0" />
+        </Grid.RenderTransform>
+
+        <!-- Drop Shadow Aura for the Banner -->
+        <Grid.Effect>
+            <DropShadowEffect Color="#00FFA3" BlurRadius="22" ShadowDepth="0" Opacity="0.55" />
+        </Grid.Effect>
+
+        <!-- Main Banner Artwork: Roaring Dragon with Flame & Titanium Bezel -->
+        <Image Source="/Resources/hud_banner_clean.png" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+        <!-- Overlay Details Layer (Badge on top, Game Name & Specs on bottom) -->
+        <Grid Margin="18,16,24,16">
+            <!-- Top Right: Badge (REPLAY EN DISCO) - Lowered slightly as requested, without F12 text -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,18,0,0">
+                <Border Background="#3500FFA3" BorderBrush="#9000FFA3" BorderThickness="1" CornerRadius="4" Padding="7,2.5">
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="6" Height="6" Fill="#00FFA3" Margin="0,0,5,0" VerticalAlignment="Center">
+                            <Ellipse.Effect>
+                                <DropShadowEffect Color="#00FFA3" BlurRadius="4" ShadowDepth="0" Opacity="0.9" />
+                            </Ellipse.Effect>
+                        </Ellipse>
+                        <TextBlock x:Name="TxtBadge" Text="REPLAY EN DISCO" FontSize="10" FontWeight="Bold" Foreground="#00FFA3"
+                                   FontFamily="Bahnschrift, Segoe UI Variable Display, Segoe UI" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- Bottom Right: Dynamic Detected Game & Resolution/FPS (High-Contrast Cyber Capsule) -->
+            <Border HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,8"
+                    Background="#C8050D14" BorderBrush="#4000FFA3" BorderThickness="1" CornerRadius="4" Padding="8,3">
+                <StackPanel Orientation="Horizontal">
+                    <!-- Detected Game Name in Ultra Crisp Bright Pure White -->
+                    <TextBlock x:Name="TxtGameName" Text="ESCRITORIO" FontSize="11" FontWeight="ExtraBold" Foreground="#FFFFFF"
+                               FontFamily="Bahnschrift, Segoe UI Variable Display, Segoe UI" VerticalAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.9" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+
+                    <TextBlock Text=" • " FontSize="10" FontWeight="Bold" Foreground="#00E5FF" VerticalAlignment="Center" Margin="3,0" />
+
+                    <!-- Specs in Electric Cyan / Neon Mint for maximum readability -->
+                    <TextBlock x:Name="TxtSpecs" Text="720p @ 60 FPS (30s)" FontSize="10.5" FontWeight="Bold" Foreground="#00FFA3"
+                               FontFamily="Bahnschrift, Segoe UI Variable Display, Segoe UI" VerticalAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="#000000" BlurRadius="4" ShadowDepth="1" Opacity="0.9" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Laser Shine Sweep Bar -->
+        <Rectangle x:Name="LaserShine" Width="100" HorizontalAlignment="Left" Opacity="0" IsHitTestVisible="False">
+            <Rectangle.RenderTransform>
+                <TransformGroup>
+                    <SkewTransform AngleX="-25" />
+                    <TranslateTransform x:Name="LaserTranslate" X="-150" Y="0" />
+                </TransformGroup>
+            </Rectangle.RenderTransform>
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#0000FFA3" Offset="0.0" />
+                    <GradientStop Color="#CCFFFFFF" Offset="0.5" />
+                    <GradientStop Color="#0000FFA3" Offset="1.0" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+    </Grid>
+</Window>

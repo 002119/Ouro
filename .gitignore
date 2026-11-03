@@ -1,0 +1,23 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+publish/
+dist/
+
+# Visual Studio / Rider / VSCode
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+.idea/
+
+# Windows thumbs & desktop.ini
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs & temp
+*.log
+*.tmp

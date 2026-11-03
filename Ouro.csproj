@@ -1,0 +1,56 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22621.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <RootNamespace>Ouro</RootNamespace>
+    <AssemblyName>Ouro</AssemblyName>
+    <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0</InformationalVersion>
+    <Company>Skyx Gaming</Company>
+    <Authors>Skyx Gaming</Authors>
+    <Product>Ouro Replay Engine</Product>
+    <Description>Motor de repetición instantánea en RAM de alto rendimiento para gaming</Description>
+    <Copyright>Copyright © 2026 Skyx Gaming. All rights reserved.</Copyright>
+    <NeutralLanguage>es</NeutralLanguage>
+    <Deterministic>true</Deterministic>
+    <NoWarn>$(NoWarn);NU1701</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Folder Include="Utils\" />
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <Resource Include="Resources\icon.ico" />
+    <Resource Include="Resources\logo.png" />
+    <Resource Include="Resources\hud_banner_clean.png" />
+    <Resource Include="Resources\clip_chime.wav" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="DevEnvy.FFmpeg.Binaries" Version="9.0.2.1100" />
+    <PackageReference Include="DevEnvy.FFmpeg.Binaries.GPLv3.Runtime.win-x64" Version="9.0.2.1100" />
+    <PackageReference Include="FFmpeg.AutoGen" Version="9.0.1.1" />
+    <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.14" />
+    <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
+    <PackageReference Include="NHotkey.Wpf" Version="4.0.0" />
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+    <PackageReference Include="Vortice.DXGI" Version="3.8.3" />
+    <PackageReference Include="Vortice.Mathematics" Version="2.1.1" />
+  </ItemGroup>
+
+</Project>
