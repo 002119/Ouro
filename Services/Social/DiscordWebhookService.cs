@@ -296,16 +296,16 @@ namespace Ouro.Services.Social
             try
             {
                 // Target slightly below limit (e.g. targetMb - 1.5MB) to guarantee Discord's strict multipart ceiling
-                double targetBytes = (Math.Max(10, targetMb) - 1.5) * 1024.0 * 1024.0;
+                double targetBytes = (Math.Max(9, targetMb) - 1.2) * 1024.0 * 1024.0;
 
                 // Probe video duration
                 double durationSec = GetVideoDurationSec(sourceFile);
-                if (durationSec <= 0.5) durationSec = 30.0;
+                if (durationSec <= 0.5) durationSec = 20.0;
 
                 // Calculate required video bitrate in kbps
                 double totalKbps = (targetBytes * 8.0) / (durationSec * 1024.0);
                 int audioKbps = 128;
-                int videoKbps = (int)Math.Max(500, totalKbps - audioKbps);
+                int videoKbps = (int)Math.Max(600, totalKbps - audioKbps);
 
                 string tempFile = Path.Combine(Path.GetTempPath(), $"ouro_discord_{Guid.NewGuid():N}.mp4");
                 string? ffmpegPath = FFmpegBootstrapper.GetFFmpegExecutablePath();
@@ -314,41 +314,21 @@ namespace Ouro.Services.Social
                     ffmpegPath = "ffmpeg";
                 }
 
-                // Fast hardware NVENC transcode with fallback to ultrafast libx264
-                var psi = new ProcessStartInfo
-                {
-                    FileName = ffmpegPath,
-                    Arguments = $"-y -i \"{sourceFile}\" -c:v h264_nvenc -b:v {videoKbps}k -maxrate {videoKbps + 100}k -bufsize {videoKbps * 2}k -preset p1 -tune ull -c:a aac -b:a {audioKbps}k -movflags +faststart \"{tempFile}\"",
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
+                // Scale down to 720p max if targeting tight bitrate (< 4000 kbps) for 3x faster encoding & sharper image
+                string scaleFilter = videoKbps < 4000 ? "-vf \"scale='min(1280,iw)':-2\" " : "";
 
-                using (var proc = Process.Start(psi))
+                // 1. Ultra-fast Hardware NVENC transcode (no stdout/stderr pipe redirection to prevent OS 4KB pipe deadlock)
+                string nvencArgs = $"-nostdin -loglevel error -y -hwaccel auto -i \"{sourceFile}\" {scaleFilter}-c:v h264_nvenc -b:v {videoKbps}k -maxrate {videoKbps + 200}k -bufsize {videoKbps * 2}k -preset p1 -c:a copy -movflags +faststart \"{tempFile}\"";
+                if (await RunFFmpegProcessAsync(ffmpegPath, nvencArgs, tempFile, timeoutSeconds: 45).ConfigureAwait(false))
                 {
-                    if (proc != null)
-                    {
-                        await proc.WaitForExitAsync().ConfigureAwait(false);
-                        if (proc.ExitCode == 0 && File.Exists(tempFile) && new FileInfo(tempFile).Length > 1000)
-                        {
-                            return tempFile;
-                        }
-                    }
+                    return tempFile;
                 }
 
-                // Fallback to CPU libx264 if NVENC is unavailable
-                psi.Arguments = $"-y -i \"{sourceFile}\" -c:v libx264 -preset ultrafast -b:v {videoKbps}k -maxrate {videoKbps + 100}k -bufsize {videoKbps * 2}k -c:a aac -b:a {audioKbps}k -movflags +faststart \"{tempFile}\"";
-                using (var proc = Process.Start(psi))
+                // 2. Fallback to multi-threaded CPU libx264 ultrafast if NVENC is unavailable or busy
+                string cpuArgs = $"-nostdin -loglevel error -y -i \"{sourceFile}\" {scaleFilter}-c:v libx264 -preset ultrafast -threads 0 -b:v {videoKbps}k -maxrate {videoKbps + 200}k -bufsize {videoKbps * 2}k -c:a aac -b:a {audioKbps}k -movflags +faststart \"{tempFile}\"";
+                if (await RunFFmpegProcessAsync(ffmpegPath, cpuArgs, tempFile, timeoutSeconds: 60).ConfigureAwait(false))
                 {
-                    if (proc != null)
-                    {
-                        await proc.WaitForExitAsync().ConfigureAwait(false);
-                        if (proc.ExitCode == 0 && File.Exists(tempFile) && new FileInfo(tempFile).Length > 1000)
-                        {
-                            return tempFile;
-                        }
-                    }
+                    return tempFile;
                 }
             }
             catch (Exception ex)
@@ -357,6 +337,43 @@ namespace Ouro.Services.Social
             }
 
             return null;
+        }
+
+        private static async Task<bool> RunFFmpegProcessAsync(string ffmpegPath, string arguments, string outputFile, int timeoutSeconds)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = ffmpegPath,
+                    Arguments = arguments,
+                    RedirectStandardOutput = false,
+                    RedirectStandardError = false,
+                    RedirectStandardInput = false,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using var proc = Process.Start(psi);
+                if (proc == null) return false;
+
+                using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(timeoutSeconds));
+                try
+                {
+                    await proc.WaitForExitAsync(cts.Token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    try { proc.Kill(entireProcessTree: true); } catch { }
+                    return false;
+                }
+
+                return proc.ExitCode == 0 && File.Exists(outputFile) && new FileInfo(outputFile).Length > 1000;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static double GetVideoDurationSec(string filePath)
@@ -374,6 +391,7 @@ namespace Ouro.Services.Social
                     FileName = probePath,
                     Arguments = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"",
                     RedirectStandardOutput = true,
+                    RedirectStandardError = false,
                     UseShellExecute = false,
                     CreateNoWindow = true
                 };
@@ -382,7 +400,7 @@ namespace Ouro.Services.Social
                 if (proc != null)
                 {
                     string output = proc.StandardOutput.ReadToEnd();
-                    proc.WaitForExit();
+                    proc.WaitForExit(3000);
                     if (double.TryParse(output.Trim(), System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double sec))
                     {
                         return sec;
@@ -390,7 +408,7 @@ namespace Ouro.Services.Social
                 }
             }
             catch { }
-            return 30.0;
+            return 20.0;
         }
     }
 }

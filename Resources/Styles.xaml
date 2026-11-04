@@ -513,6 +513,43 @@
         </Setter>
     </Style>
 
+    <!-- ============================================== -->
+    <!-- Modern Cyberpunk Dark ToolTip (System Tray Style) -->
+    <!-- ============================================== -->
+    <Style TargetType="{x:Type ToolTip}">
+        <Setter Property="OverridesDefaultStyle" Value="True" />
+        <Setter Property="HasDropShadow" Value="True" />
+        <Setter Property="Foreground" Value="#E2E8F0" />
+        <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI, sans-serif" />
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Placement" Value="Bottom" />
+        <Setter Property="VerticalOffset" Value="6" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ToolTip}">
+                    <Border Background="#0C0F17"
+                            BorderBrush="#1E293B"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,8"
+                            Margin="8"
+                            SnapsToDevicePixels="True">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.75" />
+                        </Border.Effect>
+                        <ContentPresenter HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          TextElement.Foreground="#E2E8F0"
+                                          TextElement.FontFamily="Segoe UI Variable Display, Segoe UI, sans-serif"
+                                          TextElement.FontSize="12"
+                                          TextElement.FontWeight="SemiBold" />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Modern Cyber CheckBox Style -->
     <Style x:Key="Style.CheckBox.Dark" TargetType="CheckBox">
         <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}" />

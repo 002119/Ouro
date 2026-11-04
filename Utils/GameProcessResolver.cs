@@ -175,7 +175,10 @@ namespace Ouro.Utils
                 !windowTitle.Contains("http://") &&
                 !windowTitle.Contains("https://"))
             {
-                string cleanWindow = windowTitle.Trim();
+                char[] invalid = Path.GetInvalidFileNameChars();
+                string cleanWindow = new string(windowTitle
+                    .Where(c => !invalid.Contains(c) && c != '®' && c != '™' && c != '©' && c != '\uFFFD')
+                    .ToArray()).Trim();
                 if (!string.IsNullOrWhiteSpace(cleanWindow) && !NonGameProcesses.Contains(cleanWindow))
                 {
                     return cleanWindow;
