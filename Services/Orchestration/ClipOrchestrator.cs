@@ -115,6 +115,10 @@ namespace Ouro.Services.Orchestration
             _captureEngine = captureEngine;
             _videoEncoder = videoEncoder;
             _settings = settings;
+            if (_settings?.BufferDurationSeconds > 0)
+            {
+                _replayBuffer.MaxDurationSeconds = _settings.BufferDurationSeconds;
+            }
 
             string rawPath = string.IsNullOrWhiteSpace(clipsDirectory)
                 ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyVideos), "Ouro", "Clips")
@@ -259,12 +263,14 @@ namespace Ouro.Services.Orchestration
                     _clipsDirectory = Environment.ExpandEnvironmentVariables(settings.OutputDirectoryPath);
                 }
 
+                int duration = _settings?.BufferDurationSeconds > 0 ? _settings.BufferDurationSeconds : 60;
+                _replayBuffer.MaxDurationSeconds = duration;
+
                 // If currently capturing replay, seamlessly apply new audio devices
                 if (_isRunning)
                 {
                     try
                     {
-                        int duration = _settings?.BufferDurationSeconds > 0 ? _settings.BufferDurationSeconds : 60;
                         _audioService.Stop();
                         _audioService.Start(duration, _settings?.SelectedAudioOutputDeviceId, _settings?.SelectedAudioInputDeviceId);
                     }

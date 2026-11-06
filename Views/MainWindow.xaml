@@ -567,10 +567,10 @@
                     <Border Background="#E6090A0D" />
 
                     <!-- Centered Modal Settings Card -->
-                    <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="540" MaxHeight="550"
+                    <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="550" MaxHeight="480"
                             Background="{StaticResource Brush.Background.Surface}"
                             BorderBrush="{StaticResource Brush.Border.Subtle}"
-                            BorderThickness="1" CornerRadius="12" Padding="24,18">
+                            BorderThickness="1" CornerRadius="12" Padding="24,16">
                         <Border.Effect>
                             <DropShadowEffect Color="#000000" BlurRadius="32" Opacity="0.9" ShadowDepth="10" Direction="270" />
                         </Border.Effect>

@@ -276,14 +276,6 @@ namespace Ouro.Services.Export
                             Array.Copy(masterFloats, masterFloats.Length - targetFloats, trimmed, 0, targetFloats);
                             masterFloats = trimmed;
                         }
-                        else if (masterFloats.Length < targetFloats)
-                        {
-                            // Audio buffer shorter than video: pad silence at the FRONT so the
-                            // audio that exists stays aligned with the video end instead of drifting early.
-                            var padded = new float[targetFloats];
-                            Array.Copy(masterFloats, 0, padded, targetFloats - masterFloats.Length, masterFloats.Length);
-                            masterFloats = padded;
-                        }
                     }
                     normAudioPackets = EncodeAudioPackets(masterAudioCodecCtx, masterAudioStream, masterFloats);
                 }

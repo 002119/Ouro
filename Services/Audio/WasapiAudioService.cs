@@ -137,8 +137,10 @@ namespace Ouro.Services.Audio
                         catch { }
                     }
 
+                    // Provide headroom in audio buffer so oldest audio is never dropped before matching video keyframe
+                    int audioCapacity = Math.Max(bufferDurationSeconds + 15, 60);
                     _systemCapture = renderDevice != null ? new WasapiLoopbackCapture(renderDevice) : new WasapiLoopbackCapture();
-                    _systemBuffer = new AudioRamBuffer(_systemCapture.WaveFormat, bufferDurationSeconds);
+                    _systemBuffer = new AudioRamBuffer(_systemCapture.WaveFormat, audioCapacity);
                     _systemCapture.DataAvailable += OnSystemDataAvailable;
                     _systemCapture.RecordingStopped += OnSystemRecordingStopped;
                     _systemCapture.StartRecording();
@@ -162,8 +164,9 @@ namespace Ouro.Services.Audio
                         catch { }
                     }
 
+                    int audioCapacity = Math.Max(bufferDurationSeconds + 15, 60);
                     _micCapture = captureDevice != null ? new WasapiCapture(captureDevice) : new WasapiCapture();
-                    _micBuffer = new AudioRamBuffer(_micCapture.WaveFormat, bufferDurationSeconds);
+                    _micBuffer = new AudioRamBuffer(_micCapture.WaveFormat, audioCapacity);
                     _micCapture.DataAvailable += OnMicrophoneDataAvailable;
                     _micCapture.RecordingStopped += OnMicrophoneRecordingStopped;
                     _micCapture.StartRecording();

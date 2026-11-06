@@ -518,11 +518,13 @@
     <!-- ============================================== -->
     <Style TargetType="{x:Type ToolTip}">
         <Setter Property="OverridesDefaultStyle" Value="True" />
-        <Setter Property="HasDropShadow" Value="True" />
-        <Setter Property="Foreground" Value="#E2E8F0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="HasDropShadow" Value="False" />
+        <Setter Property="Foreground" Value="#F1F5F9" />
         <Setter Property="FontFamily" Value="Segoe UI Variable Display, Segoe UI, sans-serif" />
         <Setter Property="FontSize" Value="12" />
-        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="FontWeight" Value="Medium" />
         <Setter Property="Placement" Value="Bottom" />
         <Setter Property="VerticalOffset" Value="6" />
         <Setter Property="Template">
@@ -533,17 +535,18 @@
                             BorderThickness="1"
                             CornerRadius="8"
                             Padding="12,8"
-                            Margin="8"
+                            Margin="4"
                             SnapsToDevicePixels="True">
                         <Border.Effect>
-                            <DropShadowEffect BlurRadius="16" ShadowDepth="4" Direction="270" Color="#000000" Opacity="0.75" />
+                            <DropShadowEffect BlurRadius="12" ShadowDepth="3" Direction="270" Color="#000000" Opacity="0.8" />
                         </Border.Effect>
-                        <ContentPresenter HorizontalAlignment="Center"
-                                          VerticalAlignment="Center"
-                                          TextElement.Foreground="#E2E8F0"
-                                          TextElement.FontFamily="Segoe UI Variable Display, Segoe UI, sans-serif"
-                                          TextElement.FontSize="12"
-                                          TextElement.FontWeight="SemiBold" />
+                        <TextBlock Text="{TemplateBinding Content}"
+                                   Foreground="#F1F5F9"
+                                   FontFamily="Segoe UI Variable Display, Segoe UI, sans-serif"
+                                   FontSize="12"
+                                   FontWeight="Medium"
+                                   TextWrapping="Wrap"
+                                   MaxWidth="340" />
                     </Border>
                 </ControlTemplate>
             </Setter.Value>
