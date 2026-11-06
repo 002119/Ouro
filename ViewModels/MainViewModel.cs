@@ -36,6 +36,7 @@ namespace Ouro.ViewModels
         private readonly IInputService? _inputService;
         private readonly IAudioService? _audioService;
         private readonly IDiscordService _discordService;
+        private readonly Ouro.Services.Licensing.LicenseManager? _licenseManager;
 
         private CancellationTokenSource? _toastCts;
         private WriteableBitmap? _previewBitmap;
@@ -602,10 +603,11 @@ namespace Ouro.ViewModels
         public ICommand PostManualCommand { get; }
         public ICommand SelectGameFolderCommand { get; }
         public ICommand BackToGameFoldersCommand { get; }
+        public ICommand RenewLicenseCommand { get; }
 
         public event Action? RequestShowWindow;
 
-        public MainViewModel() : this(null, null, null, null, null, null, null)
+        public MainViewModel() : this(null, null, null, null, null, null, null, null)
         {
         }
 
@@ -617,7 +619,8 @@ namespace Ouro.ViewModels
             CaptureEngine? captureEngine = null,
             IInputService? inputService = null,
             IAudioService? audioService = null,
-            IDiscordService? discordService = null)
+            IDiscordService? discordService = null,
+            Ouro.Services.Licensing.LicenseManager? licenseManager = null)
         {
             _orchestrator = orchestrator;
             _settingsManager = settingsManager;
@@ -626,6 +629,7 @@ namespace Ouro.ViewModels
             _inputService = inputService;
             _audioService = audioService;
             _discordService = discordService ?? new DiscordWebhookService();
+            _licenseManager = licenseManager;
 
             string initOutputDevId = "";
             string initInputDevId = "";
@@ -707,6 +711,7 @@ namespace Ouro.ViewModels
                 }
             });
             BackToGameFoldersCommand = new RelayCommand(BackToGameFolders);
+            RenewLicenseCommand = new RelayCommand(_ => ExecuteRenewLicense());
 
             if (_orchestrator != null)
             {
@@ -1317,6 +1322,36 @@ namespace Ouro.ViewModels
         {
             IsInsideGameFolder = false;
             SelectedGameFolder = null;
+        }
+
+        public string LicenseBadgeText
+        {
+            get
+            {
+                if (_licenseManager?.CurrentLicense != null)
+                {
+                    var lic = _licenseManager.CurrentLicense;
+                    if (lic.IsLifetime) return "✦ LICENCIA: LIFETIME";
+                    return $"✦ LICENCIA: MENSUAL ({lic.DaysRemaining} DÍAS)";
+                }
+                return "✦ LICENCIA: ACTIVA";
+            }
+        }
+
+        public string CurrentHwidText => Ouro.Services.Licensing.HwidService.GetCurrentHwid();
+
+        public string EngineHardwareStatusText => $"ACELERACIÓN: NVIDIA NVENC // BUFFER {_selectedBufferDuration}S EN RAM";
+
+        private void ExecuteRenewLicense()
+        {
+            if (_licenseManager == null) return;
+            var window = new ActivationWindow(_licenseManager);
+            bool? res = window.ShowDialog();
+            if (res == true)
+            {
+                OnPropertyChanged(nameof(LicenseBadgeText));
+                ShowToast("✦ Licencia actualizada y verificada con éxito.");
+            }
         }
 
         private void ExecutePlayClip()

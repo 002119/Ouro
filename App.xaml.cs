@@ -111,6 +111,9 @@ namespace Ouro
             // Social & Discord Webhook Integration
             services.AddSingleton<Ouro.Services.Social.IDiscordService, Ouro.Services.Social.DiscordWebhookService>();
 
+            // Licensing & HWID Verification Engine
+            services.AddSingleton<Ouro.Services.Licensing.LicenseManager>();
+
             // Presentation Layer (ViewModels & Views)
             services.AddSingleton<MainViewModel>(sp =>
                 new MainViewModel(
@@ -120,10 +123,8 @@ namespace Ouro
                     sp.GetRequiredService<CaptureEngine>(),
                     sp.GetRequiredService<IInputService>(),
                     sp.GetRequiredService<IAudioService>(),
-                    sp.GetRequiredService<Ouro.Services.Social.IDiscordService>()));
-
-            // Licensing & HWID Verification Engine
-            services.AddSingleton<Ouro.Services.Licensing.LicenseManager>();
+                    sp.GetRequiredService<Ouro.Services.Social.IDiscordService>(),
+                    sp.GetRequiredService<Ouro.Services.Licensing.LicenseManager>()));
 
             services.AddSingleton<MainWindow>();
         }
