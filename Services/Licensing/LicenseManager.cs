@@ -2,14 +2,16 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 
 namespace Ouro.Services.Licensing
 {
     public sealed class LicenseManager
     {
-        // Public RSA key used strictly for signature verification (cannot forge signatures)
-        private const string PublicKeyXml = "<RSAKeyValue><Modulus>yqWF89uRqvRA7zwc8f8LYBm8OqS3hVHj58AWALkGw+pXyj/hZIIl/pmfXawjyGv2a5Rfekrh6CkGRkVwWXegv1RHLWXFwxTwg/hV78wXCkbpE47ySJvGutc6/0hq7IdJuTkxrSGsmBZPX91wps44Nj4ycTfod/n20FRS0GH9F1cni+APaPjQYPb/9jGqSbl/0o8SOw+V8gMdviOhH0YscKEtscjhzlERBjE2t1hnQVRLwoIx79/Hh0LBq56+F0TsLZZDZkcjbfFiTjH3YDc+IhcBTmmow0uFXTMeV/n83QRotyULksvv3ZbA6Wb6dYcCnSeZLwVPFm8MlKw5iX+5UQ==</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+        // Proprietary cryptographic secret seed (used for HMAC keyed hashing)
+        private static readonly byte[] SecretKey = Encoding.UTF8.GetBytes("OURO_REPLAY_ASIC_MASTER_SEC_2026_X99_#MINT");
+
+        // Clean Base32 alphabet (excludes confusing characters: 0, O, 1, I, L)
+        private const string Alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
         private static readonly string LicenseDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Ouro");
@@ -35,96 +37,74 @@ namespace Ouro.Services.Licensing
         {
             if (string.IsNullOrWhiteSpace(rawKey))
             {
-                return (false, "Por favor introduce una clave de activación.", null);
+                return (false, "Por favor introduce tu clave de activación.", null);
             }
 
-            rawKey = rawKey.Trim();
-            if (!rawKey.StartsWith("OURO-", StringComparison.OrdinalIgnoreCase))
+            // Normalize format: remove dashes, spaces, uppercase
+            string clean = rawKey.Trim().ToUpperInvariant().Replace("-", "").Replace(" ", "");
+            if (clean.StartsWith("OURO"))
             {
-                return (false, "Formato de clave no reconocido. Debe comenzar con OURO-", null);
+                clean = clean.Substring(4);
+            }
+
+            // Expected exact 12-character license body
+            if (clean.Length != 12)
+            {
+                return (false, "La clave debe tener 12 caracteres (ej: OURO-XXXX-XXXX-XXXX).", null);
             }
 
             try
             {
-                string b64Inner = rawKey.Substring(5);
-                byte[] innerBytes = Convert.FromBase64String(b64Inner);
-                string innerString = Encoding.UTF8.GetString(innerBytes);
+                string planFlag = clean.Substring(0, 1);     // 'L' for Lifetime, 'M' for Monthly
+                string monthCode = clean.Substring(1, 2);    // Encoded month expiry for Monthly, or '99' for Lifetime
+                string signaturePart = clean.Substring(3);   // 9-character cryptographic signature
 
-                string[] parts = innerString.Split('.');
-                if (parts.Length != 2)
-                {
-                    return (false, "La estructura criptográfica de la clave es inválida.", null);
-                }
-
-                byte[] payloadBytes = Convert.FromBase64String(parts[0]);
-                byte[] signatureBytes = Convert.FromBase64String(parts[1]);
-
-                // Verify RSA-2048 SHA-256 signature
-                using var rsa = RSA.Create();
-                rsa.FromXmlString(PublicKeyXml);
-
-                bool isSignatureValid = rsa.VerifyData(
-                    payloadBytes,
-                    signatureBytes,
-                    HashAlgorithmName.SHA256,
-                    RSASignaturePadding.Pkcs1);
-
-                if (!isSignatureValid)
-                {
-                    return (false, "Firma digital no válida. La clave ha sido adulterada o falsificada.", null);
-                }
-
-                string payloadJson = Encoding.UTF8.GetString(payloadBytes);
-                using var doc = JsonDocument.Parse(payloadJson);
-                var root = doc.RootElement;
-
-                string licHwid = root.GetProperty("hwid").GetString() ?? string.Empty;
-                string licPlan = root.GetProperty("plan").GetString() ?? "Monthly";
-                string createdStr = root.GetProperty("created").GetString() ?? string.Empty;
-                string? expiresStr = root.TryGetProperty("expires", out var expProp) ? expProp.GetString() : null;
-                string nonce = root.TryGetProperty("nonce", out var nonceProp) ? nonceProp.GetString() ?? "" : "";
-
-                // Check HWID Match
                 string currentHwid = HwidService.GetCurrentHwid();
-                if (!string.Equals(licHwid, currentHwid, StringComparison.OrdinalIgnoreCase))
+                bool isLifetime = (planFlag == "L");
+
+                DateTime? expiresAt = null;
+                if (!isLifetime)
                 {
-                    return (false, $"Esta licencia pertenece a otro equipo.\nHWID Requerido: {licHwid}\nTu HWID: {currentHwid}", null);
+                    if (!int.TryParse(monthCode, out int monthsFromEpoch))
+                    {
+                        return (false, "Código temporal de licencia inválido.", null);
+                    }
+                    // Epoch baseline: Jan 2026
+                    var epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                    expiresAt = epoch.AddMonths(monthsFromEpoch);
+
+                    if (DateTime.UtcNow > expiresAt.Value)
+                    {
+                        return (false, $"Esta licencia mensual expiró el {expiresAt.Value:dd/MM/yyyy}.", null);
+                    }
                 }
 
-                DateTime createdAt = DateTime.TryParse(createdStr, out var cDate) ? cDate : DateTime.UtcNow;
-                DateTime? expiresAt = null;
-                if (!string.IsNullOrEmpty(expiresStr) && DateTime.TryParse(expiresStr, out var eDate))
+                // Verify cryptographic HMAC signature
+                string expectedSig = ComputeSignature(currentHwid, planFlag, monthCode);
+                if (!string.Equals(signaturePart, expectedSig, StringComparison.OrdinalIgnoreCase))
                 {
-                    expiresAt = eDate;
+                    return (false, "Clave incorrecta o no válida para este equipo (HWID Mismatch).", null);
                 }
 
                 var model = new LicenseModel
                 {
-                    Hwid = licHwid,
-                    Plan = licPlan,
-                    CreatedAt = createdAt,
+                    Hwid = currentHwid,
+                    Plan = isLifetime ? "Lifetime" : "Monthly",
+                    CreatedAt = DateTime.UtcNow,
                     ExpiresAt = expiresAt,
-                    Nonce = nonce,
-                    RawKey = rawKey
+                    RawKey = FormatKey(clean)
                 };
 
-                // Check Expiration
-                if (model.IsExpired)
-                {
-                    return (false, $"Esta licencia expiró el {model.ExpiresAt:dd/MM/yyyy HH:mm} UTC.", null);
-                }
-
-                // Save locally
-                SaveLicenseFile(rawKey);
+                SaveLicenseFile(model.RawKey);
                 CurrentLicense = model;
 
-                return (true, model.IsLifetime
+                return (true, isLifetime
                     ? "✦ LICENCIA DE POR VIDA ACTIVADA CON ÉXITO ✦"
                     : $"✦ LICENCIA PREMIUM ACTIVA HASTA {model.ExpiresAt:dd/MM/yyyy} ✦", model);
             }
             catch (Exception ex)
             {
-                return (false, $"Error al verificar la clave: {ex.Message}", null);
+                return (false, $"Error al procesar clave: {ex.Message}", null);
             }
         }
 
@@ -154,10 +134,27 @@ namespace Ouro.Services.Licensing
                 Directory.CreateDirectory(LicenseDirectory);
                 File.WriteAllText(LicenseFilePath, rawKey);
             }
-            catch (Exception ex)
+            catch { }
+        }
+
+        public static string ComputeSignature(string hwid, string planFlag, string monthCode)
+        {
+            using var hmac = new HMACSHA256(SecretKey);
+            string message = $"{hwid}|{planFlag}|{monthCode}";
+            byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(message));
+
+            var sb = new StringBuilder(9);
+            for (int i = 0; i < 9; i++)
             {
-                System.Diagnostics.Debug.WriteLine($"Error saving license: {ex.Message}");
+                int index = (hash[i] ^ hash[i + 9] ^ hash[i + 18]) % Alphabet.Length;
+                sb.Append(Alphabet[Math.Abs(index)]);
             }
+            return sb.ToString();
+        }
+
+        public static string FormatKey(string raw12)
+        {
+            return $"OURO-{raw12.Substring(0, 4)}-{raw12.Substring(4, 4)}-{raw12.Substring(8, 4)}";
         }
     }
 }

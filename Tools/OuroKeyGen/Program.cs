@@ -1,28 +1,26 @@
 using System;
-using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 
 namespace OuroKeyGen
 {
     class Program
     {
-        private static readonly string KeysDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "LicensingKeys");
-        private static readonly string PrivateKeyFile = Path.Combine(KeysDir, "OuroPrivateKey.xml");
-        private static readonly string PublicKeyFile = Path.Combine(KeysDir, "OuroPublicKey.xml");
+        private static readonly byte[] SecretKey = Encoding.UTF8.GetBytes("OURO_REPLAY_ASIC_MASTER_SEC_2026_X99_#MINT");
+        private const string Alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 
         static void Main(string[] args)
         {
             Console.Title = "Ouro - Generador Oficial de Licencias";
-            EnsureKeysExist();
 
             if (args.Length == 1 && (args[0] == "--self" || args[0] == "-s"))
             {
                 string localHwid = GetLocalHwid();
-                string lifetimeKey = GenerateLicenseKey(localHwid, "Lifetime", DateTime.UtcNow, null);
+                string lifetimeKey = GenerateKey(localHwid, "Lifetime");
+                string monthlyKey = GenerateKey(localHwid, "Monthly");
                 Console.WriteLine($"LOCAL_HWID: {localHwid}");
                 Console.WriteLine($"LIFETIME_KEY: {lifetimeKey}");
+                Console.WriteLine($"MONTHLY_KEY: {monthlyKey}");
                 return;
             }
 
@@ -30,12 +28,9 @@ namespace OuroKeyGen
             {
                 string cliHwid = args[0].Trim().ToUpperInvariant();
                 string cliPlan = (args[1] == "1" || args[1].Equals("monthly", StringComparison.OrdinalIgnoreCase)) ? "Monthly" : "Lifetime";
-                DateTime cDate = DateTime.UtcNow;
-                DateTime? eDate = (cliPlan == "Monthly") ? cDate.AddDays(30) : null;
-                string key = GenerateLicenseKey(cliHwid, cliPlan, cDate, eDate);
+                string key = GenerateKey(cliHwid, cliPlan);
                 Console.WriteLine($"HWID: {cliHwid}");
                 Console.WriteLine($"PLAN: {cliPlan}");
-                Console.WriteLine($"EXPIRES: {(eDate.HasValue ? eDate.Value.ToString("yyyy-MM-dd HH:mm UTC") : "Lifetime")}");
                 Console.WriteLine($"KEY: {key}");
                 return;
             }
@@ -69,10 +64,7 @@ namespace OuroKeyGen
                 string? opt = Console.ReadLine()?.Trim();
 
                 string planType = (opt == "1") ? "Monthly" : "Lifetime";
-                DateTime createdAt = DateTime.UtcNow;
-                DateTime? expiresAt = (planType == "Monthly") ? createdAt.AddDays(30) : null;
-
-                string licenseKey = GenerateLicenseKey(hwid, planType, createdAt, expiresAt);
+                string licenseKey = GenerateKey(hwid, planType);
 
                 Console.WriteLine();
                 Console.ForegroundColor = ConsoleColor.Green;
@@ -82,20 +74,57 @@ namespace OuroKeyGen
                 Console.ResetColor();
                 Console.WriteLine($"Cliente HWID : {hwid}");
                 Console.WriteLine($"Tipo         : {planType}");
-                Console.WriteLine($"Expira       : {(expiresAt.HasValue ? expiresAt.Value.ToString("yyyy-MM-dd HH:mm UTC") : "NUNCA (Lifetime)")}");
                 Console.WriteLine();
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("CLAVE PARA ENTREGAR AL CLIENTE (Copia completa):");
+                Console.WriteLine("CLAVE PARA EL CLIENTE (12 caracteres):");
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.WriteLine(licenseKey);
                 Console.ResetColor();
                 Console.WriteLine("==================================================");
-                Console.WriteLine("\nPresiona [Enter] para generar otra, o cierra la ventana.");
+                Console.WriteLine("\nPresiona [Enter] para generar otra clave...");
                 Console.ReadLine();
             }
         }
 
-        private static string GetLocalHwid()
+        public static string GenerateKey(string hwid, string planType)
+        {
+            string planFlag = (planType.Equals("Lifetime", StringComparison.OrdinalIgnoreCase)) ? "L" : "M";
+            string monthCode;
+
+            if (planFlag == "L")
+            {
+                monthCode = "99";
+            }
+            else
+            {
+                // Expires 1 month from now: count months since Jan 2026
+                var epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                var expiry = DateTime.UtcNow.AddDays(31);
+                int months = ((expiry.Year - epoch.Year) * 12) + (expiry.Month - epoch.Month) + 1;
+                monthCode = months.ToString("D2");
+            }
+
+            string signaturePart = ComputeSignature(hwid, planFlag, monthCode);
+            string raw12 = $"{planFlag}{monthCode}{signaturePart}";
+            return $"OURO-{raw12.Substring(0, 4)}-{raw12.Substring(4, 4)}-{raw12.Substring(8, 4)}";
+        }
+
+        private static string ComputeSignature(string hwid, string planFlag, string monthCode)
+        {
+            using var hmac = new HMACSHA256(SecretKey);
+            string message = $"{hwid}|{planFlag}|{monthCode}";
+            byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(message));
+
+            var sb = new StringBuilder(9);
+            for (int i = 0; i < 9; i++)
+            {
+                int index = (hash[i] ^ hash[i + 9] ^ hash[i + 18]) % Alphabet.Length;
+                sb.Append(Alphabet[Math.Abs(index)]);
+            }
+            return sb.ToString();
+        }
+
+        public static string GetLocalHwid()
         {
             var sb = new StringBuilder();
             try
@@ -137,48 +166,6 @@ namespace OuroKeyGen
             byte[] hash = SHA256.HashData(rawBytes);
             string hex = Convert.ToHexString(hash);
             return $"OURO-{hex[..4]}-{hex[4..8]}-{hex[8..12]}-{hex[12..16]}";
-        }
-
-        private static void EnsureKeysExist()
-        {
-            Directory.CreateDirectory(KeysDir);
-            if (!File.Exists(PrivateKeyFile) || !File.Exists(PublicKeyFile))
-            {
-                using var rsa = RSA.Create(2048);
-                string privateXml = rsa.ToXmlString(true);
-                string publicXml = rsa.ToXmlString(false);
-                File.WriteAllText(PrivateKeyFile, privateXml);
-                File.WriteAllText(PublicKeyFile, publicXml);
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("[INFO] Nuevas llaves RSA-2048 generadas en LicensingKeys/");
-                Console.ResetColor();
-            }
-        }
-
-        public static string GenerateLicenseKey(string hwid, string planType, DateTime createdAt, DateTime? expiresAt)
-        {
-            string privateXml = File.ReadAllText(PrivateKeyFile);
-            using var rsa = RSA.Create();
-            rsa.FromXmlString(privateXml);
-
-            var payloadObj = new
-            {
-                hwid = hwid,
-                plan = planType,
-                created = createdAt.ToString("o"),
-                expires = expiresAt?.ToString("o"),
-                nonce = Guid.NewGuid().ToString("N")[..8]
-            };
-
-            string payloadJson = JsonSerializer.Serialize(payloadObj);
-            byte[] payloadBytes = Encoding.UTF8.GetBytes(payloadJson);
-            byte[] signatureBytes = rsa.SignData(payloadBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-
-            string payloadB64 = Convert.ToBase64String(payloadBytes);
-            string signatureB64 = Convert.ToBase64String(signatureBytes);
-
-            string rawLicense = $"{payloadB64}.{signatureB64}";
-            return "OURO-" + Convert.ToBase64String(Encoding.UTF8.GetBytes(rawLicense));
         }
     }
 }
