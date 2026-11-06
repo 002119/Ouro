@@ -27,4 +27,13 @@ LicensingKeys/
 Tools/LicensingKeys/
 *PrivateKey.xml
 *.lic
+*.ourolic
+*.pem
+*.pfx
+*.snk
+
+# Local / machine-specific overrides
+appsettings.local.json
+appsettings.user.json
+.env
 Distribucion/

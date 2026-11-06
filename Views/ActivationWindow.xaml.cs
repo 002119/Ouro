@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Windows.Media.Effects;
+using Microsoft.Win32;
 using Ouro.Services.Licensing;
 
 namespace Ouro.Views
@@ -61,20 +62,46 @@ namespace Ouro.Views
             TxtStatus.Visibility = Visibility.Collapsed;
         }
 
+        private void OnBrowseLicenseClick(object sender, RoutedEventArgs e)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Title = "Selecciona tu licencia de Ouro",
+                Filter = "Licencia de Ouro (*.ourolic;*.json;*.txt)|*.ourolic;*.json;*.txt|Todos los archivos (*.*)|*.*",
+                CheckFileExists = true,
+                Multiselect = false
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
+            }
+
+            try
+            {
+                TxtLicenseKey.Text = File.ReadAllText(dialog.FileName).Trim();
+                TxtStatus.Visibility = Visibility.Collapsed;
+            }
+            catch (Exception ex)
+            {
+                ShowError($"No se pudo leer el archivo: {ex.Message}");
+            }
+        }
+
         private async void OnValidateClick(object sender, RoutedEventArgs e)
         {
             if (_isUnlocked) return;
 
-            string key = TxtLicenseKey.Text.Trim();
-            if (string.IsNullOrEmpty(key))
+            string licenseText = TxtLicenseKey.Text.Trim();
+            if (string.IsNullOrEmpty(licenseText))
             {
-                ShowError("Por favor introduce una clave de activación.");
+                ShowError("Por favor pega tu licencia o carga el archivo .ourolic.");
                 return;
             }
 
             BtnValidate.IsEnabled = false;
 
-            var (isValid, message, license) = _licenseManager.ValidateAndActivateKey(key);
+            var (isValid, message, license) = _licenseManager.ValidateAndActivateLicense(licenseText);
             if (!isValid || license == null)
             {
                 BtnValidate.IsEnabled = true;

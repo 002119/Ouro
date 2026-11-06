@@ -855,7 +855,7 @@
                                 </StackPanel>
 
                                 <!-- Audio Tracks Selection -->
-                                <TextBlock Text="Pistas de Audio a Registrar" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,4" />
+                                <TextBlock Text="Mezcla de Audio a Registrar" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,4" />
                                 <ComboBox ItemsSource="{Binding AvailableAudioModes}" SelectedItem="{Binding SelectedAudioMode}" 
                                           Style="{StaticResource Style.ComboBox.Dark}" Margin="0,0,0,8">
                                     <ComboBox.ItemTemplate>
@@ -866,7 +866,7 @@
                                                         <Setter Property="Text" Value="{Binding}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding}" Value="DualTrack">
-                                                                <Setter Property="Text" Value="🎧 Juego + Micrófono (Audio Dual Sincronizado)" />
+                                                                <Setter Property="Text" Value="🎧 Juego + Micrófono (mezclados en una pista)" />
                                                             </DataTrigger>
                                                             <DataTrigger Binding="{Binding}" Value="GameOnly">
                                                                 <Setter Property="Text" Value="🔊 Solo Audio del Juego (Silenciar micrófono)" />

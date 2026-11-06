@@ -8,7 +8,7 @@ using ID3D11Texture2D = Vortice.Direct3D11.ID3D11Texture2D;
 namespace Ouro.Services.Capture
 {
     /// <summary>
-    /// High-performance NVIDIA NVENC hardware encoder using FFmpeg.AutoGen.
+    /// High-performance NVIDIA NVENC H.264 hardware encoder using FFmpeg.AutoGen.
     /// Operates on a pure zero-copy pipeline: Direct3D 11 VRAM surfaces from the capture
     /// pipeline are mapped straight to NVENC hardware encoding contexts (AV_HWDEVICE_TYPE_D3D11VA),
     /// eliminating CPU RAM downloads and blits completely.
@@ -89,16 +89,15 @@ namespace Ouro.Services.Capture
 
         private void InitializeEncoder()
         {
-            // 1. Locate NVENC encoder (prefer h264_nvenc, fallback to hevc_nvenc)
+            // 1. Locate the H.264 NVENC encoder.
+            // The MP4 muxer currently authors an H.264 stream, so falling back to HEVC here
+            // would produce a container whose codec metadata no longer matches its packets.
             AVCodec* codec = ffmpeg.avcodec_find_encoder_by_name("h264_nvenc");
             if (codec == null)
             {
-                codec = ffmpeg.avcodec_find_encoder_by_name("hevc_nvenc");
-            }
-
-            if (codec == null)
-            {
-                throw new NotSupportedException("Neither h264_nvenc nor hevc_nvenc hardware encoder is available on this system.");
+                throw new NotSupportedException(
+                    "NVIDIA NVENC H.264 encoder (h264_nvenc) is not available. " +
+                    "Install/update the NVIDIA driver or use a GPU with NVENC support.");
             }
 
             // 2. Allocate and configure codec context

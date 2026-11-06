@@ -85,8 +85,9 @@
                         <TextBlock Text="⚙ ACTIVACIÓN DE LICENCIA" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Brush.Accent.Mint}" />
                         <TextBlock Text=" // ACCESO PRIVADO" FontSize="11" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="6,0,0,0" />
                     </StackPanel>
-                    <TextBlock Text="Pega la clave que recibiste. Queda vinculada a este equipo." FontSize="11"
-                               Foreground="{StaticResource Brush.Text.Disabled}" HorizontalAlignment="Center" Margin="0,0,0,18" />
+                    <TextBlock Text="Pega tu licencia firmada o carga el archivo .ourolic que recibiste. Queda vinculada a este equipo." FontSize="11"
+                               Foreground="{StaticResource Brush.Text.Disabled}" HorizontalAlignment="Center" TextAlignment="Center"
+                               TextWrapping="Wrap" Margin="0,0,0,14" />
 
                     <Border Background="{StaticResource Brush.Background.Deep}" BorderBrush="{StaticResource Brush.Border.Subtle}"
                             BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,12">
@@ -108,13 +109,28 @@
                         </Grid>
                     </Border>
 
-                    <TextBlock Text="CLAVE DE ACTIVACIÓN" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Secondary}" Margin="0,0,0,4" />
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="LICENCIA (JSON O TOKEN OURO2)" FontSize="10" FontWeight="Bold"
+                                   Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" />
+                        <Button x:Name="BtnBrowseLicense" Grid.Column="1" Style="{StaticResource Style.Button.ActionPill}"
+                                Height="24" Padding="10,2" Click="OnBrowseLicenseClick">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📂 " FontSize="10" />
+                                <TextBlock Text="Cargar archivo" FontSize="10" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                     <Border Background="{StaticResource Brush.Background.Deep}" BorderBrush="{StaticResource Brush.Border.Muted}"
                             BorderThickness="1" CornerRadius="6" Margin="0,0,0,12">
-                        <TextBox x:Name="TxtLicenseKey" Height="40" Background="Transparent" BorderThickness="0"
+                        <TextBox x:Name="TxtLicenseKey" Height="82" Background="Transparent" BorderThickness="0"
                                  Foreground="{StaticResource Brush.Accent.Mint}" CaretBrush="{StaticResource Brush.Accent.Mint}"
-                                 FontFamily="Consolas" FontSize="15" FontWeight="SemiBold" MaxLength="19"
-                                 VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                 FontFamily="Consolas" FontSize="10" Padding="8,6"
+                                 AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                                 VerticalContentAlignment="Top" HorizontalContentAlignment="Left"
                                  TextChanged="OnKeyTextChanged" />
                     </Border>
 
@@ -122,7 +138,7 @@
                                TextAlignment="Center" Margin="0,0,0,12" TextWrapping="Wrap" Visibility="Collapsed" />
 
                     <Button x:Name="BtnValidate" Style="{StaticResource Style.Button.Primary}" Height="40" Click="OnValidateClick"
-                            Content="VALIDAR CLAVE" />
+                            Content="VALIDAR LICENCIA" />
                 </StackPanel>
 
                 <!-- Decrypt sequence -->
@@ -136,7 +152,7 @@
                     </Canvas>
 
                     <StackPanel x:Name="TerminalTextPanel" VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <TextBlock x:Name="TxtTerminal1" Text="› VERIFICANDO FIRMA DE LICENCIA" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource Brush.Text.Secondary}" Margin="0,3" Opacity="0" />
+                        <TextBlock x:Name="TxtTerminal1" Text="› VERIFICANDO FIRMA RSA-2048" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource Brush.Text.Secondary}" Margin="0,3" Opacity="0" />
                         <TextBlock x:Name="TxtTerminal2" Text="› HWID EMPAREJADO" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource Brush.Text.Secondary}" Margin="0,3" Opacity="0" />
                         <TextBlock x:Name="TxtTerminal3" Text="› DESBLOQUEANDO MOTOR DE REPLAY EN RAM" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource Brush.Text.Secondary}" Margin="0,3" Opacity="0" />
                         <TextBlock x:Name="TxtTerminal4" Text="ACCESO CONCEDIDO" FontFamily="Consolas" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" Margin="0,10,0,0" Opacity="0" HorizontalAlignment="Center" />

@@ -2,7 +2,7 @@
 #define MyAppName "Ouro Replay Engine"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Skyx Gaming"
-#define MyAppURL "https://github.com/SkyxGaming/Ouro"
+#define MyAppURL "https://github.com/002119/Ouro"
 #define MyAppExeName "Ouro.exe"
 
 [Setup]
@@ -35,8 +35,9 @@ Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
+; El arranque con Windows se controla desde la propia app (Preferencias).
+; No crear un segundo mecanismo aquí para evitar inicios duplicados.
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "startupicon"; Description: "Iniciar Ouro minimizado al arrancar Windows"; GroupDescription: "Opciones avanzadas:"; Flags: unchecked
 
 [Files]
 Source: "..\publish\Ouro_Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -44,7 +45,6 @@ Source: "..\publish\Ouro_Release\*"; DestDir: "{app}"; Flags: ignoreversion recu
 [Icons]
 Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
-Name: "{userstartup}\Ouro"; Filename: "{app}\{#MyAppExeName}"; Parameters: "--tray"; Tasks: startupicon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

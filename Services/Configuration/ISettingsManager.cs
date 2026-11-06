@@ -4,7 +4,8 @@ using Ouro.Models;
 namespace Ouro.Services.Configuration
 {
     /// <summary>
-    /// Contract for managing and persistently updating application preferences in appsettings.json.
+    /// Contract for managing application preferences. User values are persisted in
+    /// %APPDATA%\Ouro\settings.json; the bundled appsettings.json remains a read-only default.
     /// </summary>
     public interface ISettingsManager
     {
@@ -14,7 +15,7 @@ namespace Ouro.Services.Configuration
         OuroSettings Settings { get; }
 
         /// <summary>
-        /// Persistently writes new settings to appsettings.json in a thread-safe manner.
+        /// Persistently writes new settings to the per-user profile in a thread-safe manner.
         /// </summary>
         Task SaveSettingsAsync(OuroSettings newSettings);
     }

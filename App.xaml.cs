@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Extensions.Configuration;
@@ -34,13 +35,27 @@ namespace Ouro
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
                 var ex = args.ExceptionObject as Exception;
-                MessageBox.Show($"Error fatal en Ouro:\n\n{ex?.Message}\n\n{ex?.StackTrace}", "Ouro - Error Fatal", MessageBoxButton.OK, MessageBoxImage.Error);
+                string logPath = CrashLogger.LogException(ex, "AppDomain.UnhandledException");
+                string detail = string.IsNullOrWhiteSpace(logPath)
+                    ? "No se pudo escribir el archivo de diagnóstico."
+                    : $"Diagnóstico guardado en:\n{logPath}";
+                MessageBox.Show($"Error fatal en Ouro:\n\n{ex?.Message}\n\n{detail}", "Ouro - Error Fatal", MessageBoxButton.OK, MessageBoxImage.Error);
             };
 
             DispatcherUnhandledException += (s, args) =>
             {
-                MessageBox.Show($"Error de interfaz en Ouro:\n\n{args.Exception?.Message}\n\n{args.Exception?.StackTrace}", "Ouro - Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                string logPath = CrashLogger.LogException(args.Exception, "DispatcherUnhandledException");
+                string detail = string.IsNullOrWhiteSpace(logPath)
+                    ? "No se pudo escribir el archivo de diagnóstico."
+                    : $"Diagnóstico guardado en:\n{logPath}";
+                MessageBox.Show($"Error de interfaz en Ouro:\n\n{args.Exception?.Message}\n\n{detail}", "Ouro - Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 args.Handled = true;
+            };
+
+            TaskScheduler.UnobservedTaskException += (s, args) =>
+            {
+                CrashLogger.LogException(args.Exception, "TaskScheduler.UnobservedTaskException");
+                args.SetObserved();
             };
 
             // 0. Discover native FFmpeg libraries
@@ -51,21 +66,48 @@ namespace Ouro
             Directory.CreateDirectory(appDataDir);
             string userSettingsFile = Path.Combine(appDataDir, "settings.json");
 
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-
-            if (File.Exists(userSettingsFile))
-            {
-                builder.AddJsonFile(userSettingsFile, optional: true, reloadOnChange: true);
-            }
-
-            Configuration = builder.Build();
+            Configuration = BuildConfiguration(userSettingsFile);
 
             // 2. Setup dependency injection container
             var services = new ServiceCollection();
             ConfigureServices(services, Configuration);
             ServiceProvider = services.BuildServiceProvider();
+        }
+
+        private static IConfiguration BuildConfiguration(string userSettingsFile)
+        {
+            string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+            try
+            {
+                var builder = new ConfigurationBuilder()
+                    .SetBasePath(baseDirectory)
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+                if (File.Exists(userSettingsFile))
+                {
+                    // The app owns this file; no need for a live watcher.
+                    builder.AddJsonFile(userSettingsFile, optional: true, reloadOnChange: false);
+                }
+
+                return builder.Build();
+            }
+            catch
+            {
+                // A malformed user settings file must never prevent the app from starting.
+                try
+                {
+                    return new ConfigurationBuilder()
+                        .SetBasePath(baseDirectory)
+                        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                        .Build();
+                }
+                catch
+                {
+                    // Fall back to built-in property defaults.
+                    return new ConfigurationBuilder().Build();
+                }
+            }
         }
 
         private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)

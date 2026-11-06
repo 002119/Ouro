@@ -24,6 +24,7 @@
     <Copyright>Copyright © 2026 Skyx Gaming. All rights reserved.</Copyright>
     <NeutralLanguage>es</NeutralLanguage>
     <Deterministic>true</Deterministic>
+    <SatelliteResourceLanguages>en;es</SatelliteResourceLanguages>
     <NoWarn>$(NoWarn);NU1701</NoWarn>
   </PropertyGroup>
 
@@ -51,7 +52,6 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.14" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.14" />
     <PackageReference Include="NAudio.Wasapi" Version="2.2.1" />
-    <PackageReference Include="NHotkey.Wpf" Version="4.0.0" />
     <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
     <PackageReference Include="Vortice.DXGI" Version="3.8.3" />
     <PackageReference Include="Vortice.Mathematics" Version="2.1.1" />

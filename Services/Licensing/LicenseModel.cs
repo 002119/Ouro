@@ -2,14 +2,18 @@ using System;
 
 namespace Ouro.Services.Licensing
 {
-    public class LicenseModel
+    /// <summary>
+    /// Validated license metadata held in memory after a successful signature verification.
+    /// </summary>
+    public sealed class LicenseModel
     {
+        public int Version { get; set; } = 2;
         public string Hwid { get; set; } = string.Empty;
         public string Plan { get; set; } = "Monthly"; // "Monthly" or "Lifetime"
-        public DateTime CreatedAt { get; set; }
+        public DateTime IssuedAt { get; set; }
         public DateTime? ExpiresAt { get; set; }
         public string Nonce { get; set; } = string.Empty;
-        public string RawKey { get; set; } = string.Empty;
+        public string RawLicense { get; set; } = string.Empty;
 
         public bool IsLifetime => string.Equals(Plan, "Lifetime", StringComparison.OrdinalIgnoreCase);
 

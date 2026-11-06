@@ -2,7 +2,8 @@ namespace Ouro.Models
 {
     /// <summary>
     /// Strongly-typed configuration options for Ouro user preferences.
-    /// Binds to the "OuroSettings" section in appsettings.json.
+    /// Defaults come from the "OuroSettings" section in appsettings.json; user overrides
+    /// are persisted separately in %APPDATA%\Ouro\settings.json.
     /// </summary>
     public sealed class OuroSettings
     {
@@ -17,7 +18,7 @@ namespace Ouro.Models
         public int OutputHeight { get; set; } = 1080;
         public string CaptureTargetMode { get; set; } = "Monitor"; // "Monitor", "GameOnly", "SpecificWindow"
         public string SelectedWindowTitle { get; set; } = "";
-        public string AudioMode { get; set; } = "DualTrack"; // "DualTrack", "SystemOnly", "MicOnly"
+        public string AudioMode { get; set; } = "DualTrack"; // "DualTrack", "GameOnly", "MicOnly"
         public string SelectedAudioOutputDeviceId { get; set; } = "";
         public string SelectedAudioInputDeviceId { get; set; } = "";
         public double GameVolume { get; set; } = 1.0;

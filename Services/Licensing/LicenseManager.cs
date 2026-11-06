@@ -5,27 +5,33 @@ using System.Text;
 
 namespace Ouro.Services.Licensing
 {
+    /// <summary>
+    /// Validates offline licenses signed with the project's RSA-2048 private key.
+    /// The client only embeds the public key, so a leaked binary cannot issue licenses.
+    /// </summary>
     public sealed class LicenseManager
     {
-        // Proprietary cryptographic secret seed (used for HMAC keyed hashing)
-        private static readonly byte[] SecretKey = Encoding.UTF8.GetBytes("OURO_REPLAY_ASIC_MASTER_SEC_2026_X99_#MINT");
-
-        // Clean Base32 alphabet (excludes confusing characters: 0, O, 1, I, L)
-        private const string Alphabet = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
-
         private static readonly string LicenseDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Ouro");
-        private static readonly string LicenseFilePath = Path.Combine(LicenseDirectory, "license.lic");
 
+        private static readonly string LicenseFilePath = Path.Combine(LicenseDirectory, "license.ourolic");
+
+        /// <summary>
+        /// Last license successfully validated during this process lifetime.
+        /// </summary>
         public LicenseModel? CurrentLicense { get; private set; }
 
+        /// <summary>
+        /// Loads the persisted license and returns true only if its signature, product,
+        /// hardware binding and expiry are all valid.
+        /// </summary>
         public bool IsLicensed(out LicenseModel? validLicense)
         {
             var result = LoadSavedLicense();
             if (result.IsValid && result.License != null)
             {
                 CurrentLicense = result.License;
-                validLicense = CurrentLicense;
+                validLicense = result.License;
                 return true;
             }
 
@@ -33,81 +39,41 @@ namespace Ouro.Services.Licensing
             return false;
         }
 
-        public (bool IsValid, string Message, LicenseModel? License) ValidateAndActivateKey(string rawKey)
+        /// <summary>
+        /// Verifies a license without activating or persisting it. Useful for diagnostics
+        /// and for the activation UI to report precise errors before writing to disk.
+        /// </summary>
+        public (bool IsValid, string Message, LicenseModel? License) InspectLicense(string rawLicense) =>
+            ValidateLicense(rawLicense);
+
+        /// <summary>
+        /// Verifies a license pasted by the user (JSON envelope or OURO2 token) and,
+        /// on success, stores it in %APPDATA%\Ouro\license.ourolic.
+        /// </summary>
+        public (bool IsValid, string Message, LicenseModel? License) ValidateAndActivateLicense(string rawLicense)
         {
-            if (string.IsNullOrWhiteSpace(rawKey))
+            var result = ValidateLicense(rawLicense);
+            if (!result.IsValid || result.License == null)
             {
-                return (false, "Por favor introduce tu clave de activación.", null);
-            }
-
-            // Normalize format: remove dashes, spaces, uppercase
-            string clean = rawKey.Trim().ToUpperInvariant().Replace("-", "").Replace(" ", "");
-            if (clean.StartsWith("OURO"))
-            {
-                clean = clean.Substring(4);
-            }
-
-            // Expected exact 12-character license body
-            if (clean.Length != 12)
-            {
-                return (false, "La clave debe tener 12 caracteres (ej: OURO-XXXX-XXXX-XXXX).", null);
+                return result;
             }
 
             try
             {
-                string planFlag = clean.Substring(0, 1);     // 'L' for Lifetime, 'M' for Monthly
-                string monthCode = clean.Substring(1, 2);    // Encoded month expiry for Monthly, or '99' for Lifetime
-                string signaturePart = clean.Substring(3);   // 9-character cryptographic signature
-
-                string currentHwid = HwidService.GetCurrentHwid();
-                bool isLifetime = (planFlag == "L");
-
-                DateTime? expiresAt = null;
-                if (!isLifetime)
-                {
-                    if (!int.TryParse(monthCode, out int monthsFromEpoch))
-                    {
-                        return (false, "Código temporal de licencia inválido.", null);
-                    }
-                    // Epoch baseline: Jan 2026
-                    var epoch = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-                    expiresAt = epoch.AddMonths(monthsFromEpoch);
-
-                    if (DateTime.UtcNow > expiresAt.Value)
-                    {
-                        return (false, $"Esta licencia mensual expiró el {expiresAt.Value:dd/MM/yyyy}.", null);
-                    }
-                }
-
-                // Verify cryptographic HMAC signature
-                string expectedSig = ComputeSignature(currentHwid, planFlag, monthCode);
-                if (!string.Equals(signaturePart, expectedSig, StringComparison.OrdinalIgnoreCase))
-                {
-                    return (false, "Clave incorrecta o no válida para este equipo (HWID Mismatch).", null);
-                }
-
-                var model = new LicenseModel
-                {
-                    Hwid = currentHwid,
-                    Plan = isLifetime ? "Lifetime" : "Monthly",
-                    CreatedAt = DateTime.UtcNow,
-                    ExpiresAt = expiresAt,
-                    RawKey = FormatKey(clean)
-                };
-
-                SaveLicenseFile(model.RawKey);
-                CurrentLicense = model;
-
-                return (true, isLifetime
-                    ? "✦ LICENCIA DE POR VIDA ACTIVADA CON ÉXITO ✦"
-                    : $"✦ LICENCIA PREMIUM ACTIVA HASTA {model.ExpiresAt:dd/MM/yyyy} ✦", model);
+                PersistLicense(result.License.RawLicense);
             }
             catch (Exception ex)
             {
-                return (false, $"Error al procesar clave: {ex.Message}", null);
+                return (false, $"No se pudo guardar la licencia en el equipo: {ex.Message}", null);
             }
+
+            CurrentLicense = result.License;
+            return result;
         }
 
+        /// <summary>
+        /// Re-validates the license stored in the user profile without writing to disk.
+        /// </summary>
         public (bool IsValid, LicenseModel? License) LoadSavedLicense()
         {
             if (!File.Exists(LicenseFilePath))
@@ -117,8 +83,8 @@ namespace Ouro.Services.Licensing
 
             try
             {
-                string rawKey = File.ReadAllText(LicenseFilePath).Trim();
-                var result = ValidateAndActivateKey(rawKey);
+                string rawLicense = File.ReadAllText(LicenseFilePath, Encoding.UTF8);
+                var result = ValidateLicense(rawLicense);
                 return (result.IsValid, result.License);
             }
             catch
@@ -127,34 +93,142 @@ namespace Ouro.Services.Licensing
             }
         }
 
-        private static void SaveLicenseFile(string rawKey)
+        private static (bool IsValid, string Message, LicenseModel? License) ValidateLicense(string rawLicense)
         {
+            if (!LicenseFormat.TryParse(rawLicense, out var envelope, out string parseError) || envelope == null)
+            {
+                return (false, parseError, null);
+            }
+
+            if (!VerifySignature(envelope))
+            {
+                return (false, "La firma digital de la licencia no es válida.", null);
+            }
+
+            if (envelope.Version != LicenseFormat.CurrentVersion)
+            {
+                return (false, $"Versión de licencia no soportada ({envelope.Version}).", null);
+            }
+
+            if (!string.Equals(envelope.Product, LicenseFormat.ProductName, StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "Esta licencia no pertenece a Ouro.", null);
+            }
+
+            string currentHwid = HwidService.GetCurrentHwid();
+            if (!string.Equals(NormalizeHwid(envelope.Hwid), NormalizeHwid(currentHwid), StringComparison.Ordinal))
+            {
+                return (false, "La licencia está vinculada a otro equipo (HWID distinto).", null);
+            }
+
+            bool isLifetime = string.Equals(envelope.Plan, "Lifetime", StringComparison.OrdinalIgnoreCase);
+            bool isMonthly = string.Equals(envelope.Plan, "Monthly", StringComparison.OrdinalIgnoreCase);
+            if (!isLifetime && !isMonthly)
+            {
+                return (false, "Tipo de licencia desconocido.", null);
+            }
+
+            if (envelope.IssuedAt <= 0)
+            {
+                return (false, "La licencia no tiene una fecha de emisión válida.", null);
+            }
+
+            DateTime issuedAt;
             try
             {
-                Directory.CreateDirectory(LicenseDirectory);
-                File.WriteAllText(LicenseFilePath, rawKey);
+                issuedAt = DateTimeOffset.FromUnixTimeSeconds(envelope.IssuedAt).UtcDateTime;
             }
-            catch { }
-        }
-
-        public static string ComputeSignature(string hwid, string planFlag, string monthCode)
-        {
-            using var hmac = new HMACSHA256(SecretKey);
-            string message = $"{hwid}|{planFlag}|{monthCode}";
-            byte[] hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(message));
-
-            var sb = new StringBuilder(9);
-            for (int i = 0; i < 9; i++)
+            catch
             {
-                int index = (hash[i] ^ hash[i + 9] ^ hash[i + 18]) % Alphabet.Length;
-                sb.Append(Alphabet[Math.Abs(index)]);
+                return (false, "La fecha de emisión de la licencia está fuera de rango.", null);
             }
-            return sb.ToString();
+
+            // Allow a small clock skew so a freshly issued license is not rejected
+            // on machines that are a few hours behind.
+            if (issuedAt > DateTime.UtcNow.AddDays(1))
+            {
+                return (false, "La licencia tiene una fecha de emisión futura.", null);
+            }
+
+            DateTime? expiresAt = null;
+            if (!isLifetime)
+            {
+                if (!envelope.ExpiresAt.HasValue || envelope.ExpiresAt.Value <= 0)
+                {
+                    return (false, "La licencia mensual no tiene fecha de vencimiento.", null);
+                }
+
+                try
+                {
+                    expiresAt = DateTimeOffset.FromUnixTimeSeconds(envelope.ExpiresAt.Value).UtcDateTime;
+                }
+                catch
+                {
+                    return (false, "La fecha de vencimiento de la licencia está fuera de rango.", null);
+                }
+
+                if (expiresAt.Value <= issuedAt)
+                {
+                    return (false, "La fecha de vencimiento es anterior a la emisión.", null);
+                }
+
+                if (DateTime.UtcNow > expiresAt.Value)
+                {
+                    return (false, $"Esta licencia expiró el {expiresAt.Value.ToLocalTime():dd/MM/yyyy}.", null);
+                }
+            }
+
+            var model = new LicenseModel
+            {
+                Version = envelope.Version,
+                Hwid = currentHwid,
+                Plan = isLifetime ? "Lifetime" : "Monthly",
+                IssuedAt = issuedAt,
+                ExpiresAt = expiresAt,
+                Nonce = envelope.Nonce ?? string.Empty,
+                RawLicense = LicenseFormat.Serialize(envelope)
+            };
+
+            string successMessage = isLifetime
+                ? "✦ LICENCIA DE POR VIDA ACTIVADA CON ÉXITO ✦"
+                : $"✦ LICENCIA PREMIUM ACTIVA HASTA {expiresAt:dd/MM/yyyy} ✦";
+
+            return (true, successMessage, model);
         }
 
-        public static string FormatKey(string raw12)
+        private static bool VerifySignature(LicenseEnvelope envelope)
         {
-            return $"OURO-{raw12.Substring(0, 4)}-{raw12.Substring(4, 4)}-{raw12.Substring(8, 4)}";
+            if (string.IsNullOrWhiteSpace(envelope.Signature))
+            {
+                return false;
+            }
+
+            try
+            {
+                byte[] signature = Convert.FromBase64String(envelope.Signature);
+
+                using var rsa = RSA.Create();
+                rsa.FromXmlString(OuroLicensePublicKey.Xml);
+
+                return rsa.VerifyData(
+                    LicenseFormat.BuildPayloadBytes(envelope),
+                    signature,
+                    HashAlgorithmName.SHA256,
+                    RSASignaturePadding.Pkcs1);
+            }
+            catch
+            {
+                return false;
+            }
         }
+
+        private static void PersistLicense(string rawLicense)
+        {
+            Directory.CreateDirectory(LicenseDirectory);
+            File.WriteAllText(LicenseFilePath, rawLicense, new UTF8Encoding(false));
+        }
+
+        private static string NormalizeHwid(string? hwid) =>
+            (hwid ?? string.Empty).Trim().ToUpperInvariant();
     }
 }
