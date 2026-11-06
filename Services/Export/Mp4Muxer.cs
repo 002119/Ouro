@@ -262,19 +262,27 @@ namespace Ouro.Services.Export
                 if (masterAudioStream != null && masterAudioCodecCtx != null && masterFloats.Length > 0)
                 {
                     double vTbSec = (videoTimeBase.den > 0) ? ((double)videoTimeBase.num / videoTimeBase.den) : (1.0 / 60.0);
-                    double videoDurSec = lastVideoPts * vTbSec;
+                    // Video duration includes the final frame's own duration.
+                    double videoDurSec = (lastVideoPts + 1) * vTbSec;
                     if (videoDurSec > 0.5)
                     {
+                        // Audio and video are END-aligned (both snapshots are taken at the same instant).
                         // 48000 Hz * 2 channels = 96000 floats/sec.
-                        // Align audio to video end-time: if audio buffer has older samples prior to the first video keyframe,
-                        // trim from the FRONT (excessFloats) so audio and video stay perfectly in sync to the millisecond!
-                        int maxAudioFloats = (int)((videoDurSec + 0.15) * 48000 * 2);
-                        if (masterFloats.Length > maxAudioFloats)
+                        int targetFloats = (int)Math.Round(videoDurSec * 48000) * 2;
+                        if (masterFloats.Length > targetFloats)
                         {
-                            int excessFloats = masterFloats.Length - maxAudioFloats;
-                            var trimmed = new float[maxAudioFloats];
-                            Array.Copy(masterFloats, excessFloats, trimmed, 0, maxAudioFloats);
+                            // Audio older than the first video keyframe: trim from the FRONT.
+                            var trimmed = new float[targetFloats];
+                            Array.Copy(masterFloats, masterFloats.Length - targetFloats, trimmed, 0, targetFloats);
                             masterFloats = trimmed;
+                        }
+                        else if (masterFloats.Length < targetFloats)
+                        {
+                            // Audio buffer shorter than video: pad silence at the FRONT so the
+                            // audio that exists stays aligned with the video end instead of drifting early.
+                            var padded = new float[targetFloats];
+                            Array.Copy(masterFloats, 0, padded, targetFloats - masterFloats.Length, masterFloats.Length);
+                            masterFloats = padded;
                         }
                     }
                     normAudioPackets = EncodeAudioPackets(masterAudioCodecCtx, masterAudioStream, masterFloats);

@@ -207,6 +207,7 @@ namespace Ouro.Services.Orchestration
                 try
                 {
                     int duration = _settings?.BufferDurationSeconds > 0 ? _settings.BufferDurationSeconds : 60;
+                    _replayBuffer.MaxDurationSeconds = duration; // keep video buffer horizon identical to audio
                     _audioService.Start(duration, _settings?.SelectedAudioOutputDeviceId, _settings?.SelectedAudioInputDeviceId);
                 }
                 catch (Exception ex)
