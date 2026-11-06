@@ -29,6 +29,8 @@ namespace Ouro
 
         public App()
         {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
             {
                 var ex = args.ExceptionObject as Exception;
@@ -162,6 +164,7 @@ namespace Ouro
             // 2. Resolve MainWindow, bind MainViewModel, and present UI
             var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
             mainWindow.DataContext = ServiceProvider.GetRequiredService<MainViewModel>();
+            mainWindow.Closed += (s, ev) => Shutdown();
             if (!startMinimized)
             {
                 mainWindow.Show();
