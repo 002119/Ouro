@@ -120,12 +120,28 @@ namespace Ouro
                     sp.GetRequiredService<IAudioService>(),
                     sp.GetRequiredService<Ouro.Services.Social.IDiscordService>()));
 
+            // Licensing & HWID Verification Engine
+            services.AddSingleton<Ouro.Services.Licensing.LicenseManager>();
+
             services.AddSingleton<MainWindow>();
         }
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // 0. Cryptographic HWID License Verification
+            var licenseManager = ServiceProvider.GetRequiredService<Ouro.Services.Licensing.LicenseManager>();
+            if (!licenseManager.IsLicensed(out _))
+            {
+                var activationWindow = new Ouro.Views.ActivationWindow(licenseManager);
+                bool? unlocked = activationWindow.ShowDialog();
+                if (unlocked != true)
+                {
+                    Shutdown();
+                    return;
+                }
+            }
 
             var settings = ServiceProvider.GetRequiredService<IOptions<OuroSettings>>().Value;
 

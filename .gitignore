@@ -21,3 +21,9 @@ Desktop.ini
 # Logs & temp
 *.log
 *.tmp
+
+# Private Licensing Keys (Never leak to public repo)
+LicensingKeys/
+Tools/LicensingKeys/
+*PrivateKey.xml
+*.lic

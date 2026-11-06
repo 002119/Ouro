@@ -28,6 +28,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Tools\**" />
+    <None Remove="Tools\**" />
+    <Compile Remove="LicensingKeys\**" />
+    <None Remove="LicensingKeys\**" />
     <Folder Include="Utils\" />
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

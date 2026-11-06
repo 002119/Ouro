@@ -1,0 +1,278 @@
+<Window x:Class="Ouro.Views.ActivationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Ouro - Activación de Licencia"
+        Height="540" Width="680"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <!-- Button Styles -->
+        <Style x:Key="Style.Activation.Button" TargetType="Button">
+            <Setter Property="Height" Value="46" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Foreground" Value="#090A0D" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="BtnBorder" CornerRadius="8" Padding="16,0">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                    <GradientStop Color="#00FFA3" Offset="0" />
+                                    <GradientStop Color="#00E5FF" Offset="1" />
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <Border.Effect>
+                                <DropShadowEffect Color="#00FFA3" BlurRadius="18" Opacity="0.5" ShadowDepth="0" />
+                            </Border.Effect>
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="BtnBorder" Property="Effect">
+                                    <Setter.Value>
+                                        <DropShadowEffect Color="#00FFA3" BlurRadius="28" Opacity="0.85" ShadowDepth="0" />
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="BtnBorder" Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Copy Pill Button -->
+        <Style x:Key="Style.Activation.Pill" TargetType="Button">
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Background" Value="#1E293B" />
+            <Setter Property="Foreground" Value="#00FFA3" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="PillBorder" Background="{TemplateBinding Background}" CornerRadius="6" Padding="10,0">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="PillBorder" Property="Background" Value="#334155" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="RootGrid" MouseLeftButtonDown="OnWindowDrag">
+        <Grid.RenderTransform>
+            <ScaleTransform x:Name="RootScale" CenterX="340" CenterY="270" ScaleX="1" ScaleY="1" />
+        </Grid.RenderTransform>
+
+        <!-- ============================================== -->
+        <!-- ANIMATED AMBIENT CYBER AURA (BACKGROUND)       -->
+        <!-- ============================================== -->
+        <Canvas HorizontalAlignment="Center" VerticalAlignment="Center" Width="640" Height="500" IsHitTestVisible="False">
+            <!-- Aura Ring 1 (Cyan & Mint rotating) -->
+            <Ellipse Width="460" Height="360" Canvas.Left="90" Canvas.Top="70" Opacity="0.35">
+                <Ellipse.Fill>
+                    <RadialGradientBrush Center="0.5,0.5" GradientOrigin="0.4,0.4" RadiusX="0.5" RadiusY="0.5">
+                        <GradientStop Color="#00FFA3" Offset="0" />
+                        <GradientStop Color="#00B4D8" Offset="0.5" />
+                        <GradientStop Color="Transparent" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+                <Ellipse.RenderTransform>
+                    <RotateTransform x:Name="AuraRotate1" CenterX="230" CenterY="180" Angle="0" />
+                </Ellipse.RenderTransform>
+                <Ellipse.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                            <Storyboard RepeatBehavior="Forever">
+                                <DoubleAnimation Storyboard.TargetName="AuraRotate1"
+                                                 Storyboard.TargetProperty="Angle"
+                                                 From="0" To="360" Duration="0:0:16" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Ellipse.Triggers>
+            </Ellipse>
+
+            <!-- Aura Ring 2 (Purple & Deep Cyan counter-rotating) -->
+            <Ellipse Width="400" Height="320" Canvas.Left="120" Canvas.Top="90" Opacity="0.25">
+                <Ellipse.Fill>
+                    <RadialGradientBrush Center="0.5,0.5" GradientOrigin="0.6,0.6" RadiusX="0.5" RadiusY="0.5">
+                        <GradientStop Color="#7928CA" Offset="0" />
+                        <GradientStop Color="#00E5FF" Offset="0.6" />
+                        <GradientStop Color="Transparent" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+                <Ellipse.RenderTransform>
+                    <RotateTransform x:Name="AuraRotate2" CenterX="200" CenterY="160" Angle="360" />
+                </Ellipse.RenderTransform>
+                <Ellipse.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                            <Storyboard RepeatBehavior="Forever">
+                                <DoubleAnimation Storyboard.TargetName="AuraRotate2"
+                                                 Storyboard.TargetProperty="Angle"
+                                                 From="360" To="0" Duration="0:0:22" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Ellipse.Triggers>
+            </Ellipse>
+        </Canvas>
+
+        <!-- ============================================== -->
+        <!-- CENTRAL OBSIDIAN GLASS CARD                    -->
+        <!-- ============================================== -->
+        <Border x:Name="CardBorder" HorizontalAlignment="Center" VerticalAlignment="Center" Width="520"
+                Background="#EE0B0D14" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="16"
+                Padding="32,28">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" BlurRadius="40" Opacity="0.95" ShadowDepth="12" Direction="270" />
+            </Border.Effect>
+
+            <Grid>
+                <!-- Close Button (Top-Right) -->
+                <Button HorizontalAlignment="Right" VerticalAlignment="Top" Width="26" Height="26"
+                        Click="OnCloseClick" Cursor="Hand" Background="Transparent" BorderThickness="0"
+                        Foreground="#64748B" FontSize="14" FontWeight="Bold" Content="✕" Margin="0,-10,-10,0">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="Transparent">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="#EF4444" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <!-- Normal Input State -->
+                <StackPanel x:Name="InputPanel">
+                    <!-- Brand Header -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,6">
+                        <Border Background="#1000FFA3" CornerRadius="6" Padding="8,4" Margin="0,0,10,0">
+                            <TextBlock Text="✦ OURO REPLAY" FontSize="11" FontWeight="Bold" Foreground="#00FFA3" />
+                        </Border>
+                        <TextBlock Text="PROTOCOLO DE ACCESO" FontSize="11" FontWeight="SemiBold" Foreground="#94A3B8" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <TextBlock Text="Activación de Licencia" FontSize="20" FontWeight="Bold" Foreground="#F8FAFC" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                    <TextBlock Text="Ingresa tu clave autorizada vinculada a tu ID de hardware." FontSize="11" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,0,0,22" />
+
+                    <!-- Section: Hardware ID Display -->
+                    <Border Background="#07090E" BorderBrush="#1E293B" BorderThickness="1" CornerRadius="8" Padding="14,10" Margin="0,0,0,16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="TU HARDWARE ID (HWID ÚNICO):" FontSize="9" FontWeight="Bold" Foreground="#64748B" Margin="0,0,0,3" />
+                                <TextBlock x:Name="TxtHwid" Text="OURO-XXXX-XXXX-XXXX-XXXX" FontFamily="Consolas, monospace" FontSize="13" FontWeight="Bold" Foreground="#38BDF8" />
+                            </StackPanel>
+                            <Button x:Name="BtnCopyHwid" Grid.Column="1" Style="{StaticResource Style.Activation.Pill}" Click="OnCopyHwidClick">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="TxtCopyIcon" Text="📋 " FontSize="10" />
+                                    <TextBlock x:Name="TxtCopyLabel" Text="Copiar ID" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <!-- Section: Key Input -->
+                    <TextBlock Text="CLAVE DE ACTIVACIÓN" FontSize="10" FontWeight="Bold" Foreground="#94A3B8" Margin="0,0,0,6" />
+                    <Border Background="#07090E" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Margin="0,0,0,14">
+                        <TextBox x:Name="TxtLicenseKey" Height="42" Background="Transparent" BorderThickness="0"
+                                 Foreground="#F1F5F9" FontFamily="Consolas, monospace" FontSize="12"
+                                 VerticalContentAlignment="Center" Padding="12,0"
+                                 TextChanged="OnKeyTextChanged" />
+                    </Border>
+
+                    <!-- Status Message Box -->
+                    <TextBlock x:Name="TxtStatus" Text="" FontSize="11" FontWeight="SemiBold" Foreground="#EF4444"
+                               TextAlignment="Center" Margin="0,0,0,14" TextWrapping="Wrap" Visibility="Collapsed" />
+
+                    <!-- Unlock Button -->
+                    <Button x:Name="BtnValidate" Style="{StaticResource Style.Activation.Button}" Click="OnValidateClick">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="✦ " FontWeight="Bold" />
+                            <TextBlock Text="VALIDAR Y DESENCRIPTAR OURO" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <!-- ============================================== -->
+                <!-- CINEMATIC DECRYPT SEQUENCE OVERLAY (AUTOR)     -->
+                <!-- ============================================== -->
+                <Grid x:Name="DecryptOverlay" Visibility="Collapsed">
+                    <!-- Scanner Laser Beam -->
+                    <Canvas x:Name="LaserCanvas" Height="360" VerticalAlignment="Top" ClipToBounds="True">
+                        <Rectangle x:Name="LaserBeam" Width="480" Height="3" Canvas.Left="-10" Canvas.Top="-20">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="Transparent" Offset="0" />
+                                    <GradientStop Color="#00FFA3" Offset="0.3" />
+                                    <GradientStop Color="#FFFFFF" Offset="0.5" />
+                                    <GradientStop Color="#00FFA3" Offset="0.7" />
+                                    <GradientStop Color="Transparent" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <Rectangle.Effect>
+                                <DropShadowEffect Color="#00FFA3" BlurRadius="24" ShadowDepth="0" Opacity="1" />
+                            </Rectangle.Effect>
+                        </Rectangle>
+                    </Canvas>
+
+                    <!-- Decrypt Telemetry Terminal Text -->
+                    <StackPanel x:Name="TerminalTextPanel" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock x:Name="TxtTerminal1" Text="// INICIANDO PROTOCOLO RSA-2048..." FontFamily="Consolas, monospace" FontSize="12" Foreground="#00FFA3" Margin="0,2" Opacity="0" />
+                        <TextBlock x:Name="TxtTerminal2" Text="// HASH HWID EMPAREJADO CON ÉXITO..." FontFamily="Consolas, monospace" FontSize="12" Foreground="#38BDF8" Margin="0,2" Opacity="0" />
+                        <TextBlock x:Name="TxtTerminal3" Text="// DESENCRIPTANDO MÓDULOS DE REPLAY..." FontFamily="Consolas, monospace" FontSize="12" Foreground="#A855F7" Margin="0,2" Opacity="0" />
+                        <TextBlock x:Name="TxtTerminal4" Text=">> ACCESO CONCEDIDO // BIENVENIDO" FontFamily="Consolas, monospace" FontSize="14" FontWeight="Bold" Foreground="#00FFA3" Margin="0,10,0,0" Opacity="0" HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <!-- Exclusivity Success Badge -->
+                    <StackPanel x:Name="BadgePanel" VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0">
+                        <StackPanel.RenderTransform>
+                            <ScaleTransform x:Name="BadgeScale" CenterX="150" CenterY="50" ScaleX="0.8" ScaleY="0.8" />
+                        </StackPanel.RenderTransform>
+                        <Border Background="#1500FFA3" BorderBrush="#00FFA3" BorderThickness="1.5" CornerRadius="12" Padding="24,16" Margin="0,0,0,12">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#00FFA3" BlurRadius="32" ShadowDepth="0" Opacity="0.8" />
+                            </Border.Effect>
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="TxtBadgeTitle" Text="✦ ACCESO DE POR VIDA DESBLOQUEADO ✦"
+                                           FontSize="15" FontWeight="Bold" Foreground="#00FFA3" HorizontalAlignment="Center" />
+                                <TextBlock x:Name="TxtBadgeSubtitle" Text="Ouro Replay Engine está completamente activado."
+                                           FontSize="11" Foreground="#E2E8F0" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
