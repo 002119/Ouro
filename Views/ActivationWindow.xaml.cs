@@ -46,12 +46,12 @@ namespace Ouro.Views
                 Clipboard.SetText(TxtHwid.Text);
                 TxtCopyIcon.Text = "✔ ";
                 TxtCopyLabel.Text = "Copiado!";
-                BtnCopyHwid.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#065F46"));
+                BtnCopyHwid.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#0E2A24"));
 
                 await Task.Delay(2000);
                 TxtCopyIcon.Text = "📋 ";
                 TxtCopyLabel.Text = "Copiar ID";
-                BtnCopyHwid.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E293B"));
+                BtnCopyHwid.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E2330"));
             }
             catch { }
         }
@@ -117,15 +117,13 @@ namespace Ouro.Views
             // Update Badge Text based on Plan
             if (license.IsLifetime)
             {
-                TxtBadgeTitle.Text = "✦ ACCESO DE POR VIDA DESBLOQUEADO ✦";
-                TxtBadgeTitle.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#00FFA3"));
-                TxtBadgeSubtitle.Text = "Licencia permanente verificada. Bienvenido al círculo de Ouro.";
+                TxtBadgeTitle.Text = "✦ LICENCIA PERMANENTE VERIFICADA ✦";
+                TxtBadgeSubtitle.Text = "// MOTOR DE REPETICIÓN EN RAM DESBLOQUEADO";
             }
             else
             {
-                TxtBadgeTitle.Text = $"✦ ACCESO PREMIUM ACTIVO // 30 DÍAS ✦";
-                TxtBadgeTitle.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#38BDF8"));
-                TxtBadgeSubtitle.Text = $"Válido hasta el {license.ExpiresAt:dd/MM/yyyy}. Bienvenido a Ouro.";
+                TxtBadgeTitle.Text = "✦ LICENCIA PREMIUM ACTIVA ✦";
+                TxtBadgeSubtitle.Text = $"// VÁLIDA HASTA {license.ExpiresAt:dd/MM/yyyy}";
             }
 
             // Play audio confirmation chime
@@ -148,7 +146,7 @@ namespace Ouro.Views
             var laserAnim = new DoubleAnimation
             {
                 From = -20,
-                To = 360,
+                To = 320,
                 Duration = TimeSpan.FromMilliseconds(550),
                 EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseInOut }
             };
