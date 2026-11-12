@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>OuroKeyGen</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Share the canonical license format and public key with the client to avoid drift. -->
+    <Compile Include="..\..\Services\Licensing\LicenseFormat.cs" Link="Shared\LicenseFormat.cs" />
+    <Compile Include="..\..\Services\Licensing\OuroLicensePublicKey.cs" Link="Shared\OuroLicensePublicKey.cs" />
+  </ItemGroup>
+
+</Project>

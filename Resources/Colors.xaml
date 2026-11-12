@@ -1,0 +1,48 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- Obsidian & Carbon Base Palette (Dark Matte Surfaces) -->
+    <Color x:Key="Color.Background.Deep">#08090C</Color>
+    <Color x:Key="Color.Background.Surface">#0E1015</Color>
+    <Color x:Key="Color.Background.Elevated">#161922</Color>
+    <Color x:Key="Color.Background.Hover">#1E222E</Color>
+    
+    <!-- Hairline Borders & Dividers -->
+    <Color x:Key="Color.Border.Subtle">#1E2330</Color>
+    <Color x:Key="Color.Border.Muted">#292F3F</Color>
+    <Color x:Key="Color.Border.Active">#3A4257</Color>
+
+    <!-- Typography -->
+    <Color x:Key="Color.Text.Primary">#F8FAFC</Color>
+    <Color x:Key="Color.Text.Secondary">#94A3B8</Color>
+    <Color x:Key="Color.Text.Disabled">#475569</Color>
+
+    <!-- Refined Author Accents (Electric Mint & Status Highlights) -->
+    <Color x:Key="Color.Accent.Mint">#00F0B5</Color>
+    <Color x:Key="Color.Accent.MintMuted">#00B386</Color>
+    <Color x:Key="Color.Accent.MintGaze">#1A00F0B5</Color>
+    <Color x:Key="Color.Accent.Orange">#FF6B35</Color>
+    <Color x:Key="Color.Accent.OrangeGaze">#26FF6B35</Color>
+    <Color x:Key="Color.Status.Recording">#FF3366</Color>
+    <Color x:Key="Color.Text.OnAccent">#08090C</Color>
+
+    <!-- Solid Brushes -->
+    <SolidColorBrush x:Key="Brush.Background.Deep" Color="{StaticResource Color.Background.Deep}" />
+    <SolidColorBrush x:Key="Brush.Background.Surface" Color="{StaticResource Color.Background.Surface}" />
+    <SolidColorBrush x:Key="Brush.Background.Elevated" Color="{StaticResource Color.Background.Elevated}" />
+    <SolidColorBrush x:Key="Brush.Background.Hover" Color="{StaticResource Color.Background.Hover}" />
+
+    <SolidColorBrush x:Key="Brush.Border.Subtle" Color="{StaticResource Color.Border.Subtle}" />
+    <SolidColorBrush x:Key="Brush.Border.Muted" Color="{StaticResource Color.Border.Muted}" />
+    <SolidColorBrush x:Key="Brush.Border.Active" Color="{StaticResource Color.Border.Active}" />
+
+    <SolidColorBrush x:Key="Brush.Text.Primary" Color="{StaticResource Color.Text.Primary}" />
+    <SolidColorBrush x:Key="Brush.Text.Secondary" Color="{StaticResource Color.Text.Secondary}" />
+    <SolidColorBrush x:Key="Brush.Text.Disabled" Color="{StaticResource Color.Text.Disabled}" />
+    <SolidColorBrush x:Key="Brush.Text.OnAccent" Color="{StaticResource Color.Text.OnAccent}" />
+
+    <SolidColorBrush x:Key="Brush.Accent.Mint" Color="{StaticResource Color.Accent.Mint}" />
+    <SolidColorBrush x:Key="Brush.Accent.MintMuted" Color="{StaticResource Color.Accent.MintMuted}" />
+    <SolidColorBrush x:Key="Brush.Accent.MintGaze" Color="{StaticResource Color.Accent.MintGaze}" />
+    <SolidColorBrush x:Key="Brush.Accent.Orange" Color="{StaticResource Color.Accent.Orange}" />
+    <SolidColorBrush x:Key="Brush.Status.Recording" Color="{StaticResource Color.Status.Recording}" />
+</ResourceDictionary>

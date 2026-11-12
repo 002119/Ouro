@@ -1,0 +1,373 @@
+using System;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Windows.Input;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Ouro.Models;
+using Ouro.Services.Audio;
+using Ouro.Services.Capture;
+using Ouro.Services.Configuration;
+using Ouro.Services.Export;
+using Ouro.Services.Input;
+using Ouro.Services.Orchestration;
+using Ouro.Utils;
+using Ouro.ViewModels;
+using Ouro.Views;
+
+namespace Ouro
+{
+    /// <summary>
+    /// Application entry point configuring Dependency Injection (DI) and lifecycle management.
+    /// Manages boot orchestration, configuration options, global hook subscriptions, and graceful unmanaged teardown.
+    /// </summary>
+    public partial class App : Application
+    {
+        private static Mutex? _singleInstanceMutex;
+        private static EventWaitHandle? _wakeEvent;
+        private const string SingleInstanceMutexName = @"Local\OuroReplayEngine_SingleInstance_Mutex";
+        private const string SingleInstanceWakeEventName = @"Local\OuroReplayEngine_Wake_Event";
+
+        public static IServiceProvider ServiceProvider { get; private set; } = null!;
+        public static IConfiguration Configuration { get; private set; } = null!;
+
+        public App()
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+
+            AppDomain.CurrentDomain.UnhandledException += (s, args) =>
+            {
+                var ex = args.ExceptionObject as Exception;
+                string logPath = CrashLogger.LogException(ex, "AppDomain.UnhandledException");
+                string detail = string.IsNullOrWhiteSpace(logPath)
+                    ? "No se pudo escribir el archivo de diagnóstico."
+                    : $"Diagnóstico guardado en:\n{logPath}";
+                MessageBox.Show($"Error fatal en Ouro:\n\n{ex?.Message}\n\n{detail}", "Ouro - Error Fatal", MessageBoxButton.OK, MessageBoxImage.Error);
+            };
+
+            DispatcherUnhandledException += (s, args) =>
+            {
+                string logPath = CrashLogger.LogException(args.Exception, "DispatcherUnhandledException");
+                string detail = string.IsNullOrWhiteSpace(logPath)
+                    ? "No se pudo escribir el archivo de diagnóstico."
+                    : $"Diagnóstico guardado en:\n{logPath}";
+                MessageBox.Show($"Error de interfaz en Ouro:\n\n{args.Exception?.Message}\n\n{detail}", "Ouro - Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                args.Handled = true;
+            };
+
+            TaskScheduler.UnobservedTaskException += (s, args) =>
+            {
+                CrashLogger.LogException(args.Exception, "TaskScheduler.UnobservedTaskException");
+                args.SetObserved();
+            };
+
+            // 0. Discover native FFmpeg libraries
+            FFmpegBootstrapper.Initialize();
+
+            // 1. Build configuration from appsettings.json and persistent %APPDATA% settings
+            string appDataDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Ouro");
+            Directory.CreateDirectory(appDataDir);
+            string userSettingsFile = Path.Combine(appDataDir, "settings.json");
+
+            Configuration = BuildConfiguration(userSettingsFile);
+
+            // 2. Setup dependency injection container
+            var services = new ServiceCollection();
+            ConfigureServices(services, Configuration);
+            ServiceProvider = services.BuildServiceProvider();
+        }
+
+        private static IConfiguration BuildConfiguration(string userSettingsFile)
+        {
+            string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
+            try
+            {
+                var builder = new ConfigurationBuilder()
+                    .SetBasePath(baseDirectory)
+                    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+                if (File.Exists(userSettingsFile))
+                {
+                    // The app owns this file; no need for a live watcher.
+                    builder.AddJsonFile(userSettingsFile, optional: true, reloadOnChange: false);
+                }
+
+                return builder.Build();
+            }
+            catch
+            {
+                // A malformed user settings file must never prevent the app from starting.
+                try
+                {
+                    return new ConfigurationBuilder()
+                        .SetBasePath(baseDirectory)
+                        .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
+                        .Build();
+                }
+                catch
+                {
+                    // Fall back to built-in property defaults.
+                    return new ConfigurationBuilder().Build();
+                }
+            }
+        }
+
+        private static void ConfigureServices(IServiceCollection services, IConfiguration configuration)
+        {
+            // Configuration & Options Pattern
+            services.AddSingleton<IConfiguration>(configuration);
+            services.Configure<OuroSettings>(configuration.GetSection(OuroSettings.SectionName));
+            services.AddSingleton<ISettingsManager, SettingsManager>();
+
+            // Core Replay Buffers & Capture Pipeline (Singletons)
+            services.AddSingleton<IRamReplayBuffer>(sp =>
+                new RamReplayBuffer(sp.GetRequiredService<IOptions<OuroSettings>>()));
+
+            services.AddSingleton<CaptureEngine>();
+
+            services.AddSingleton<IVideoEncoder>(sp =>
+            {
+                var engine = sp.GetRequiredService<CaptureEngine>();
+                var replayBuffer = sp.GetRequiredService<IRamReplayBuffer>();
+                return new NvencEncoder(engine.Device!, engine.Context!, replayBuffer);
+            });
+
+            // Dual-track Audio Service (WASAPI Loopback + Mic)
+            services.AddSingleton<IAudioService, WasapiAudioService>();
+
+            // Global System Hotkey Service
+            services.AddSingleton<IInputService, HotkeyService>();
+
+            // MP4 Disk Persistence Multiplexer
+            services.AddSingleton<IMp4Muxer, Mp4Muxer>();
+
+            // Central Brain / Orchestrator
+            services.AddSingleton<IClipOrchestrator>(sp =>
+                new ClipOrchestrator(
+                    sp.GetRequiredService<IInputService>(),
+                    sp.GetRequiredService<IRamReplayBuffer>(),
+                    sp.GetRequiredService<IAudioService>(),
+                    sp.GetRequiredService<IMp4Muxer>(),
+                    sp.GetRequiredService<IOptions<OuroSettings>>(),
+                    sp.GetRequiredService<CaptureEngine>(),
+                    sp.GetRequiredService<IVideoEncoder>()));
+
+            // Social & Discord Webhook Integration
+            services.AddSingleton<Ouro.Services.Social.IDiscordService, Ouro.Services.Social.DiscordWebhookService>();
+
+            // Licensing & HWID Verification Engine
+            services.AddSingleton<Ouro.Services.Licensing.LicenseManager>();
+
+            // Presentation Layer (ViewModels & Views)
+            services.AddSingleton<MainViewModel>(sp =>
+                new MainViewModel(
+                    sp.GetRequiredService<IClipOrchestrator>(),
+                    sp.GetRequiredService<ISettingsManager>(),
+                    sp.GetRequiredService<IRamReplayBuffer>(),
+                    sp.GetRequiredService<CaptureEngine>(),
+                    sp.GetRequiredService<IInputService>(),
+                    sp.GetRequiredService<IAudioService>(),
+                    sp.GetRequiredService<Ouro.Services.Social.IDiscordService>(),
+                    sp.GetRequiredService<Ouro.Services.Licensing.LicenseManager>()));
+
+            services.AddSingleton<MainWindow>();
+        }
+
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            base.OnStartup(e);
+
+            // -1. Single-Instance Enforcement & Wake Signal
+            bool isFirstInstance;
+            try
+            {
+                _singleInstanceMutex = new Mutex(true, SingleInstanceMutexName, out isFirstInstance);
+            }
+            catch (AbandonedMutexException)
+            {
+                isFirstInstance = true;
+            }
+            catch
+            {
+                isFirstInstance = true;
+            }
+
+            if (!isFirstInstance)
+            {
+                bool isBackground = e.Args != null && Array.Exists(e.Args, a =>
+                    a.Equals("--minimized", StringComparison.OrdinalIgnoreCase) ||
+                    a.Equals("--tray", StringComparison.OrdinalIgnoreCase));
+
+                if (!isBackground)
+                {
+                    // User launched a second instance: signal existing instance to restore its window
+                    try
+                    {
+                        if (EventWaitHandle.TryOpenExisting(SingleInstanceWakeEventName, out var existingWakeEvent))
+                        {
+                            existingWakeEvent.Set();
+                            existingWakeEvent.Dispose();
+                        }
+                    }
+                    catch { }
+                }
+
+                Shutdown();
+                return;
+            }
+
+            // Setup wake listener thread for subsequent launches
+            try
+            {
+                _wakeEvent = new EventWaitHandle(false, EventResetMode.AutoReset, SingleInstanceWakeEventName);
+                var wakeThread = new Thread(() =>
+                {
+                    while (true)
+                    {
+                        try
+                        {
+                            if (_wakeEvent.WaitOne())
+                            {
+                                Dispatcher.Invoke(() =>
+                                {
+                                    if (MainWindow is MainWindow mw)
+                                    {
+                                        mw.RestoreWindow();
+                                    }
+                                });
+                            }
+                        }
+                        catch (ThreadAbortException) { break; }
+                        catch (ObjectDisposedException) { break; }
+                        catch { }
+                    }
+                })
+                {
+                    IsBackground = true,
+                    Name = "Ouro_WakeListenerThread"
+                };
+                wakeThread.Start();
+            }
+            catch (Exception ex)
+            {
+                CrashLogger.LogException(ex, "App.InitializeWakeEvent");
+            }
+
+            // 0. Cryptographic HWID License Verification
+            var licenseManager = ServiceProvider.GetRequiredService<Ouro.Services.Licensing.LicenseManager>();
+            if (!licenseManager.IsLicensed(out _))
+            {
+                var activationWindow = new Ouro.Views.ActivationWindow(licenseManager);
+                bool? unlocked = activationWindow.ShowDialog();
+                if (unlocked != true)
+                {
+                    Shutdown();
+                    return;
+                }
+            }
+
+            var settings = ServiceProvider.GetRequiredService<IOptions<OuroSettings>>().Value;
+
+            // 1. Configure user-defined hotkey (defaults to F12)
+            try
+            {
+                var inputService = ServiceProvider.GetRequiredService<IInputService>();
+                string hotkey = !string.IsNullOrWhiteSpace(settings.SaveHotkey) ? settings.SaveHotkey : "F12";
+                inputService.RegisterSaveHotkey(hotkey);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to register configured hotkey ({settings.SaveHotkey}): {ex.Message}");
+            }
+
+            bool startMinimized = e.Args != null && Array.Exists(e.Args, a => a.Equals("--minimized", StringComparison.OrdinalIgnoreCase) || a.Equals("--tray", StringComparison.OrdinalIgnoreCase));
+
+            // Purge any legacy duplicate shortcuts in shell:startup
+            WindowsStartupHelper.CleanLegacyStartupShortcuts();
+
+            // 2. Resolve MainWindow, bind MainViewModel, and present UI
+            var mainWindow = ServiceProvider.GetRequiredService<MainWindow>();
+            mainWindow.DataContext = ServiceProvider.GetRequiredService<MainViewModel>();
+            mainWindow.Closed += (s, ev) => Shutdown();
+            MainWindow = mainWindow;
+
+            if (startMinimized)
+            {
+                // Ensure WPF visual tree and H.NotifyIcon TaskbarIcon hook are initialized safely in the tray
+                if (mainWindow.DataContext is MainViewModel vm)
+                {
+                    vm.SetUiVisible(false);
+                }
+                mainWindow.WindowState = WindowState.Minimized;
+                mainWindow.Show();
+                try
+                {
+                    if (!mainWindow.TrayIcon.IsCreated)
+                    {
+                        mainWindow.TrayIcon.ForceCreate(enablesEfficiencyMode: false);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[App] TrayIcon init warning: {ex.Message}");
+                }
+                mainWindow.Hide();
+            }
+            else
+            {
+                mainWindow.Show();
+            }
+        }
+
+        protected override void OnExit(ExitEventArgs e)
+        {
+            // 0. Dispose Wake Event & Release Single-Instance Mutex
+            try
+            {
+                _wakeEvent?.Dispose();
+                if (_singleInstanceMutex != null)
+                {
+                    _singleInstanceMutex.ReleaseMutex();
+                    _singleInstanceMutex.Dispose();
+                }
+            }
+            catch { }
+
+            // 1. Unhook orchestrator and input triggers
+            try
+            {
+                var orchestrator = ServiceProvider.GetService<IClipOrchestrator>();
+                orchestrator?.Stop();
+                orchestrator?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error stopping orchestrator: {ex.Message}");
+            }
+
+            // 2. Stop audio capture endpoints to avoid device locks
+            try
+            {
+                var audioService = ServiceProvider.GetService<IAudioService>();
+                audioService?.Stop();
+                audioService?.Dispose();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error stopping audio service: {ex.Message}");
+            }
+
+            // 3. Dispose unmanaged COM objects, NVENC contexts, and ServiceProvider
+            if (ServiceProvider is IDisposable disposableProvider)
+            {
+                disposableProvider.Dispose();
+            }
+
+            base.OnExit(e);
+        }
+    }
+}

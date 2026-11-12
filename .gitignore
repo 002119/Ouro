@@ -1,0 +1,46 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+publish/
+dist/
+
+# Visual Studio / Rider / VSCode
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vscode/
+.idea/
+
+# Windows thumbs & desktop.ini
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Logs & temp
+*.log
+*.tmp
+
+# Private Licensing Keys (Never leak to public repo)
+LicensingKeys/
+Tools/LicensingKeys/
+*PrivateKey.xml
+*.lic
+*.ourolic
+*.pem
+*.pfx
+*.snk
+
+# Local / machine-specific overrides
+appsettings.local.json
+appsettings.user.json
+.env
+Distribucion/
+
+# Local shortcuts & developer helper scripts
+*.lnk
+Subir_A_GitHub.bat
+AUDITORIA*.md
+RESULTADOS*
+Tools/Repair-Shortcut.ps1

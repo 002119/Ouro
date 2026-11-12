@@ -1,0 +1,184 @@
+<Window x:Class="Ouro.Views.ActivationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Ouro - Activación"
+        Height="560" Width="700"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize">
+
+    <Grid x:Name="RootGrid" MouseLeftButtonDown="OnWindowDrag">
+        <Grid.RenderTransform>
+            <ScaleTransform x:Name="RootScale" CenterX="350" CenterY="280" ScaleX="1" ScaleY="1" />
+        </Grid.RenderTransform>
+
+        <!-- Orbital hairline rings + mint breathing halo -->
+        <Canvas HorizontalAlignment="Center" VerticalAlignment="Center" Width="640" Height="520" IsHitTestVisible="False">
+            <Ellipse Width="420" Height="420" Canvas.Left="110" Canvas.Top="50">
+                <Ellipse.Fill>
+                    <RadialGradientBrush>
+                        <GradientStop Color="#2800F0B5" Offset="0" />
+                        <GradientStop Color="Transparent" Offset="1" />
+                    </RadialGradientBrush>
+                </Ellipse.Fill>
+                <Ellipse.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0.35" To="1" Duration="0:0:3" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Ellipse.Triggers>
+            </Ellipse>
+
+            <Ellipse Width="540" Height="440" Canvas.Left="50" Canvas.Top="40" Stroke="{StaticResource Brush.Border.Muted}"
+                     StrokeThickness="1" StrokeDashArray="2 8" Opacity="0.7">
+                <Ellipse.RenderTransform>
+                    <RotateTransform x:Name="AuraRotate1" CenterX="270" CenterY="220" />
+                </Ellipse.RenderTransform>
+                <Ellipse.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                            <Storyboard RepeatBehavior="Forever">
+                                <DoubleAnimation Storyboard.TargetName="AuraRotate1" Storyboard.TargetProperty="Angle" From="0" To="360" Duration="0:0:40" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Ellipse.Triggers>
+            </Ellipse>
+
+            <Ellipse Width="600" Height="490" Canvas.Left="20" Canvas.Top="15" Stroke="{StaticResource Brush.Accent.MintMuted}"
+                     StrokeThickness="1" StrokeDashArray="1 40" Opacity="0.8">
+                <Ellipse.RenderTransform>
+                    <RotateTransform x:Name="AuraRotate2" CenterX="300" CenterY="245" />
+                </Ellipse.RenderTransform>
+                <Ellipse.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                            <Storyboard RepeatBehavior="Forever">
+                                <DoubleAnimation Storyboard.TargetName="AuraRotate2" Storyboard.TargetProperty="Angle" From="360" To="0" Duration="0:0:28" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Ellipse.Triggers>
+            </Ellipse>
+        </Canvas>
+
+        <!-- Card (same language as Ouro modals) -->
+        <Border x:Name="CardBorder" HorizontalAlignment="Center" VerticalAlignment="Center" Width="500"
+                Background="{StaticResource Brush.Background.Surface}"
+                BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="12" Padding="28,22">
+            <Border.Effect>
+                <DropShadowEffect Color="#000000" BlurRadius="32" Opacity="0.9" ShadowDepth="10" Direction="270" />
+            </Border.Effect>
+            <Grid>
+                <Button HorizontalAlignment="Right" VerticalAlignment="Top" Width="28" Height="28" Margin="0,-8,-12,0"
+                        Style="{StaticResource Style.Button.WindowControl}" Content="✕" Click="OnCloseClick" />
+
+                <StackPanel x:Name="InputPanel">
+                    <Image Source="pack://application:,,,/Resources/logo.png" Height="64" HorizontalAlignment="Center" Margin="0,0,0,10" RenderOptions.BitmapScalingMode="HighQuality" />
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
+                        <TextBlock Text="⚙ ACTIVACIÓN DE LICENCIA" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Brush.Accent.Mint}" />
+                        <TextBlock Text=" // ACCESO PRIVADO" FontSize="11" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    </StackPanel>
+                    <TextBlock Text="Pega tu licencia firmada o carga el archivo .ourolic que recibiste. Queda vinculada a este equipo." FontSize="11"
+                               Foreground="{StaticResource Brush.Text.Disabled}" HorizontalAlignment="Center" TextAlignment="Center"
+                               TextWrapping="Wrap" Margin="0,0,0,14" />
+
+                    <Border Background="{StaticResource Brush.Background.Deep}" BorderBrush="{StaticResource Brush.Border.Subtle}"
+                            BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="ID DE ESTE EQUIPO (HWID)" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" Margin="0,0,0,3" />
+                                <TextBlock x:Name="TxtHwid" Text="OURO-XXXX-XXXX-XXXX-XXXX" FontFamily="Consolas" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" />
+                            </StackPanel>
+                            <Button x:Name="BtnCopyHwid" Grid.Column="1" Style="{StaticResource Style.Button.ActionPill}" Height="28" Padding="10,2" Click="OnCopyHwidClick">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock x:Name="TxtCopyIcon" Text="📋 " FontSize="10" />
+                                    <TextBlock x:Name="TxtCopyLabel" Text="Copiar ID" FontSize="10" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="LICENCIA (JSON O TOKEN OURO2)" FontSize="10" FontWeight="Bold"
+                                   Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" />
+                        <Button x:Name="BtnBrowseLicense" Grid.Column="1" Style="{StaticResource Style.Button.ActionPill}"
+                                Height="24" Padding="10,2" Click="OnBrowseLicenseClick">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📂 " FontSize="10" />
+                                <TextBlock Text="Cargar archivo" FontSize="10" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <Border Background="{StaticResource Brush.Background.Deep}" BorderBrush="{StaticResource Brush.Border.Muted}"
+                            BorderThickness="1" CornerRadius="6" Margin="0,0,0,12">
+                        <TextBox x:Name="TxtLicenseKey" Height="82" Background="Transparent" BorderThickness="0"
+                                 Foreground="{StaticResource Brush.Accent.Mint}" CaretBrush="{StaticResource Brush.Accent.Mint}"
+                                 FontFamily="Consolas" FontSize="10" Padding="8,6"
+                                 AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                                 VerticalContentAlignment="Top" HorizontalContentAlignment="Left"
+                                 TextChanged="OnKeyTextChanged" />
+                    </Border>
+
+                    <TextBlock x:Name="TxtStatus" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Status.Recording}"
+                               TextAlignment="Center" Margin="0,0,0,12" TextWrapping="Wrap" Visibility="Collapsed" />
+
+                    <Button x:Name="BtnValidate" Style="{StaticResource Style.Button.Primary}" Height="40" Click="OnValidateClick"
+                            Content="VALIDAR LICENCIA" />
+                </StackPanel>
+
+                <!-- Decrypt sequence -->
+                <Grid x:Name="DecryptOverlay" Visibility="Collapsed" MinHeight="300">
+                    <Canvas x:Name="LaserCanvas" VerticalAlignment="Stretch" ClipToBounds="True">
+                        <Rectangle x:Name="LaserBeam" Width="460" Height="2" Canvas.Left="-4" Canvas.Top="-20" Fill="{StaticResource Brush.Accent.Mint}">
+                            <Rectangle.Effect>
+                                <DropShadowEffect Color="#00F0B5" BlurRadius="22" ShadowDepth="0" Opacity="1" />
+                            </Rectangle.Effect>
+                        </Rectangle>
+                    </Canvas>
+
+                    <StackPanel x:Name="TerminalTextPanel" VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <TextBlock x:Name="TxtTerminal1" Text="› VERIFICANDO FIRMA RSA-2048" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource Brush.Text.Secondary}" Margin="0,3" Opacity="0" />
+                        <TextBlock x:Name="TxtTerminal2" Text="› HWID EMPAREJADO" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource Brush.Text.Secondary}" Margin="0,3" Opacity="0" />
+                        <TextBlock x:Name="TxtTerminal3" Text="› DESBLOQUEANDO MOTOR DE REPLAY EN RAM" FontFamily="Consolas" FontSize="12" Foreground="{StaticResource Brush.Text.Secondary}" Margin="0,3" Opacity="0" />
+                        <TextBlock x:Name="TxtTerminal4" Text="ACCESO CONCEDIDO" FontFamily="Consolas" FontSize="14" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" Margin="0,10,0,0" Opacity="0" HorizontalAlignment="Center" />
+                    </StackPanel>
+
+                    <StackPanel x:Name="BadgePanel" VerticalAlignment="Center" HorizontalAlignment="Center" Opacity="0">
+                        <StackPanel.RenderTransform>
+                            <ScaleTransform x:Name="BadgeScale" CenterX="200" CenterY="60" ScaleX="0.8" ScaleY="0.8" />
+                        </StackPanel.RenderTransform>
+                        <Image Source="pack://application:,,,/Resources/logo.png" Height="72" HorizontalAlignment="Center" Margin="0,0,0,14">
+                            <Image.Effect>
+                                <DropShadowEffect Color="#00F0B5" BlurRadius="28" ShadowDepth="0" Opacity="0.8" />
+                            </Image.Effect>
+                        </Image>
+                        <Border Background="{StaticResource Brush.Accent.MintGaze}" BorderBrush="{StaticResource Brush.Accent.Mint}"
+                                BorderThickness="1" CornerRadius="8" Padding="22,12">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock x:Name="TxtBadgeTitle" Text="✦ LICENCIA PERMANENTE VERIFICADA ✦" FontSize="13" FontWeight="Bold"
+                                           Foreground="{StaticResource Brush.Accent.Mint}" HorizontalAlignment="Center" />
+                                <TextBlock x:Name="TxtBadgeSubtitle" Text="// MOTOR DE REPETICIÓN EN RAM DESBLOQUEADO" FontFamily="Consolas" FontSize="10"
+                                           Foreground="{StaticResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,4,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

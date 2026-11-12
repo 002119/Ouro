@@ -1,0 +1,1542 @@
+<Window x:Class="Ouro.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:Ouro.ViewModels"
+        xmlns:tb="clr-namespace:H.NotifyIcon;assembly=H.NotifyIcon.Wpf"
+        mc:Ignorable="d"
+        Title="Ouro Replay"
+        Icon="pack://application:,,,/Resources/icon.ico"
+        Height="640" Width="840"
+        MinHeight="600" MinWidth="780"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="#090A0D">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter" />
+    </Window.Resources>
+
+    <!-- Design-Time Fallback DataContext -->
+    <d:Window.DataContext>
+        <vm:MainViewModel />
+    </d:Window.DataContext>
+
+    <!-- Obsidian Window Shell -->
+    <Border BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="12" Background="{StaticResource Brush.Background.Deep}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <!-- Title Bar -->
+                <RowDefinition Height="44" />
+                <!-- Main Interactive Viewport & Controls -->
+                <RowDefinition Height="*" />
+                <!-- Telemetry Footer Bar -->
+                <RowDefinition Height="34" />
+            </Grid.RowDefinitions>
+
+            <!-- System Tray Notification Icon Component -->
+            <tb:TaskbarIcon x:Name="TrayIcon"
+                            ToolTipText="Ouro Replay Engine"
+                            IconSource="pack://application:,,,/Resources/icon.ico"
+                            LeftClickCommand="{Binding ShowWindowCommand}"
+                            DoubleClickCommand="{Binding ShowWindowCommand}">
+                <tb:TaskbarIcon.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="🖥  Abrir Panel de Ouro" Command="{Binding ShowWindowCommand}" />
+                        <MenuItem Header="{Binding SelectedHotkey, StringFormat='⚡ Guardar Clip Ahora ({0})'}" Command="{Binding TriggerInstantSaveCommand}" IsEnabled="{Binding CanSaveClip}" />
+                        <MenuItem Header="📁 Abrir Carpeta de Clips" Command="{Binding OpenClipsFolderCommand}" />
+                        <Separator />
+                        <MenuItem Header="🚪 Salir de Ouro" Command="{Binding ExitApplicationCommand}" />
+                    </ContextMenu>
+                </tb:TaskbarIcon.ContextMenu>
+            </tb:TaskbarIcon>
+
+            <!-- Title Bar -->
+            <Border Grid.Row="0" Background="{StaticResource Brush.Background.Surface}" CornerRadius="12,12,0,0"
+                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Branding & Status Indicator -->
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
+                        <Border Width="20" Height="20" CornerRadius="5" Margin="0,0,10,0" ClipToBounds="True" Background="{StaticResource Brush.Background.Elevated}">
+                            <Image Source="pack://application:,,,/Resources/logo.png" RenderOptions.BitmapScalingMode="HighQuality" />
+                        </Border>
+                        <Grid Width="12" Height="12" Margin="0,0,10,0">
+                            <!-- Outer pulsing radar glow -->
+                            <Ellipse x:Name="PulseRing" Fill="{StaticResource Brush.Accent.MintGaze}" RenderTransformOrigin="0.5,0.5">
+                                <Ellipse.RenderTransform>
+                                    <ScaleTransform ScaleX="1" ScaleY="1" />
+                                </Ellipse.RenderTransform>
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEngineRunning}" Value="True">
+                                                <DataTrigger.EnterActions>
+                                                    <BeginStoryboard x:Name="RingStoryboard">
+                                                        <Storyboard RepeatBehavior="Forever">
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleX)"
+                                                                             From="1.0" To="2.2" Duration="0:0:1.4" />
+                                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(ScaleTransform.ScaleY)"
+                                                                             From="1.0" To="2.2" Duration="0:0:1.4" />
+                                                            <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                             From="0.9" To="0.0" Duration="0:0:1.4" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </DataTrigger.EnterActions>
+                                                <DataTrigger.ExitActions>
+                                                    <StopStoryboard BeginStoryboardName="RingStoryboard" />
+                                                </DataTrigger.ExitActions>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                            <!-- Core Status Dot -->
+                            <Ellipse Width="8" Height="8" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="{StaticResource Brush.Text.Disabled}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsEngineRunning}" Value="True">
+                                                <Setter Property="Fill" Value="{StaticResource Brush.Accent.Mint}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </Grid>
+                        <TextBlock Text="Ouro Replay" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Brush.Text.Primary}" />
+                        <Border Background="{StaticResource Brush.Background.Elevated}" CornerRadius="4" Padding="6,2" Margin="10,0,0,0">
+                            <TextBlock Text="SKYX GAMING ENGINE" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Quick Telemetry Badge in Title Bar -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <Border Background="{StaticResource Brush.Background.Elevated}" BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="12" Padding="10,2">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding SelectedResolution}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Primary}" />
+                                <TextBlock Text=" • " FontSize="10" Foreground="{StaticResource Brush.Text.Disabled}" Margin="2,0" />
+                                <TextBlock Text="{Binding SelectedFramerate, StringFormat='{}{0} FPS'}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                <TextBlock Text=" • ATAJO: " FontSize="10" Foreground="{StaticResource Brush.Text.Disabled}" Margin="4,0,0,0" />
+                                <TextBlock Text="{Binding SelectedHotkey}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Primary}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- Window Control Actions (Minimize, Close) -->
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,8,0">
+                        <Button Style="{StaticResource Style.Button.WindowControl}" Click="MinimizeButton_Click" Content="—" />
+                        <Button Style="{StaticResource Style.Button.WindowControl.Close}" Click="CloseButton_Click" Content="✕" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Main Interactive Viewport & Controls -->
+            <Grid Grid.Row="1" Margin="24,14,24,12">
+                <Grid.RowDefinitions>
+                    <!-- Live Interactive Monitor Preview Screen -->
+                    <RowDefinition Height="*" />
+                    <!-- Action Command Deck (Buttons & Quick Pills) -->
+                    <RowDefinition Height="Auto" />
+                    <!-- Telemetry Summary Cards -->
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <!-- LIVE INTERACTIVE MONITOR PREVIEW VIEWPORT (OBS STYLE) -->
+                <Border Grid.Row="0" Background="#0C0E14" BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="8" Margin="0,0,0,12" ClipToBounds="True">
+                    <Grid>
+                        <!-- OBS Right-Click Context Menu -->
+                        <Grid.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{Binding PreviewToggleText}" Command="{Binding TogglePreviewCommand}" />
+                                <Separator />
+                                <MenuItem Header="📁 Abrir Carpeta de Clips" Command="{Binding OpenClipsFolderCommand}" />
+                                <MenuItem Header="⚙ Configurar Ajustes..." Command="{Binding ToggleSettingsCommand}" />
+                            </ContextMenu>
+                        </Grid.ContextMenu>
+
+                        <!-- ============================================== -->
+                        <!-- 1. STANDBY HUD (When awaiting initial frame)   -->
+                        <!-- ============================================== -->
+                        <Grid x:Name="StandbyHud">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ShowPreviewStandby}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+
+                            <!-- Ambient Grid Pattern -->
+                            <Border Opacity="0.08">
+                                <Border.Background>
+                                    <DrawingBrush TileMode="Tile" Viewport="0,0,40,40" ViewportUnits="Absolute">
+                                        <DrawingBrush.Drawing>
+                                            <GeometryDrawing Geometry="M 0 0 L 40 0 L 40 40 L 0 40 Z">
+                                                <GeometryDrawing.Pen>
+                                                    <Pen Brush="#00F0B5" Thickness="0.5" />
+                                                </GeometryDrawing.Pen>
+                                            </GeometryDrawing>
+                                        </DrawingBrush.Drawing>
+                                    </DrawingBrush>
+                                </Border.Background>
+                            </Border>
+
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border Width="64" Height="64" CornerRadius="32" Background="{StaticResource Brush.Background.Elevated}" 
+                                        BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" Margin="0,0,0,12" HorizontalAlignment="Center">
+                                    <TextBlock Text="🖥" FontSize="26" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                </Border>
+                                <TextBlock Text="MONITOR DE CAPTURA LISTO" FontSize="13" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Primary}" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                                <TextBlock Text="Sincronizando pantalla en vivo con DirectX 11... Presiona 'Iniciar Replay' para comenzar a almacenar clips en RAM." 
+                                           FontSize="11" Foreground="{StaticResource Brush.Text.Secondary}" HorizontalAlignment="Center" MaxWidth="440" TextAlignment="Center" LineHeight="16" />
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- ============================================== -->
+                        <!-- 2. REAL-TIME LIVE PREVIEW STREAM (ACTIVE)      -->
+                        <!-- ============================================== -->
+                        <Grid x:Name="LivePreviewFeed">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ShowPreviewStream}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+
+                            <!-- Native Hardware DirectX Frame Output -->
+                            <Image Source="{Binding PreviewImage}" Stretch="Uniform" SnapsToDevicePixels="True" />
+
+                            <!-- LIVE HUD OVERLAYS -->
+                            <!-- Top-Left Replay / Preview Status Badge -->
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Top" Margin="14"
+                                    Background="#E608090C" BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="4" Padding="8,4">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Ellipse Width="8" Height="8" Margin="0,0,6,0">
+                                        <Ellipse.Style>
+                                            <Style TargetType="Ellipse">
+                                                <Setter Property="Fill" Value="{StaticResource Brush.Accent.Mint}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsEngineRunning}" Value="True">
+                                                        <Setter Property="Fill" Value="#FF3366" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Ellipse.Style>
+                                    </Ellipse>
+                                    <TextBlock Text="{Binding ReplayStatusBadgeText}" FontSize="10" FontWeight="Bold" Foreground="#FFFFFF" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Top-Right Action Pill: Quick Toggle Preview (OBS Style) -->
+                            <Button Command="{Binding TogglePreviewCommand}"
+                                    HorizontalAlignment="Right" VerticalAlignment="Top" Margin="14"
+                                    Style="{StaticResource Style.Button.ActionPill}" Height="26" Padding="8,0"
+                                    ToolTip="Pausa la previsualización en pantalla para ahorrar 100% de GPU mientras juegas">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding PreviewToggleGlyph}" FontSize="10" Margin="0,0,5,0" />
+                                    <TextBlock Text="{Binding PreviewToggleStatusText}" FontSize="9" FontWeight="Bold" />
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Bottom-Left Active Target Pill -->
+                            <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="14"
+                                    Background="#E608090C" BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="4" Padding="8,4">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="OBJETIVO: " FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                    <TextBlock Text="{Binding TargetDescription}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" MaxWidth="320" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Bottom-Right Resolution & Hotkey Pill -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="14">
+                                <Border Background="#E608090C" BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="4" Padding="8,4" Margin="0,0,8,0">
+                                    <TextBlock FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}">
+                                        <TextBlock.Text>
+                                            <MultiBinding StringFormat="{}{0} @ {1} FPS">
+                                                <Binding Path="SelectedResolution" />
+                                                <Binding Path="SelectedFramerate" />
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
+                                </Border>
+                                <Border Background="#E608080C" BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="4" Padding="8,4">
+                                    <TextBlock Text="{Binding SelectedHotkey, StringFormat='{}ATAJO: {0}'}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Primary}" />
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- ============================================== -->
+                        <!-- 3. PREVIEW PAUSED HUD (Zero-Overhead Gaming)   -->
+                        <!-- ============================================== -->
+                        <Grid x:Name="PausedHud">
+                            <Grid.Style>
+                                <Style TargetType="Grid">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ShowPreviewPaused}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Grid.Style>
+
+                            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Border Width="56" Height="56" CornerRadius="28" Background="{StaticResource Brush.Background.Elevated}" 
+                                        BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" Margin="0,0,0,12" HorizontalAlignment="Center">
+                                    <TextBlock Text="⚡" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                </Border>
+                                <TextBlock Text="PREVISUALIZACIÓN EN PAUSA (MODO RENDIMIENTO MÁXIMO)" FontSize="13" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Primary}" HorizontalAlignment="Center" Margin="0,0,0,4" />
+                                <TextBlock Text="{Binding SelectedFramerate, StringFormat='El motor sigue capturando y registrando clips a {0} FPS sin consumo visual.'}" 
+                                           FontSize="11" Foreground="{StaticResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,0,0,12" />
+                                <Button Command="{Binding TogglePreviewCommand}" Content="Activar Previsualización" Style="{StaticResource Style.Button.ActionPill}" HorizontalAlignment="Center" Padding="14,0" Height="28" />
+                            </StackPanel>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- ACTION COMMAND DECK (CENTRAL CONTROLS & QUICK PILLS) -->
+                <Border Grid.Row="1" Style="{StaticResource Style.Card.Container}" Margin="0,0,0,12" Padding="16,14">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <!-- Main Action Buttons Row -->
+                        <StackPanel Grid.Row="0" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
+                            <!-- Primary Replay Toggle Button -->
+                            <Button Command="{Binding ToggleEngineCommand}" Height="46" MinWidth="240" Margin="0,0,12,0">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <!-- Inactive State -->
+                                        <Setter Property="Background" Value="{StaticResource Brush.Background.Elevated}" />
+                                        <Setter Property="Foreground" Value="{StaticResource Brush.Text.Primary}" />
+                                        <Setter Property="BorderBrush" Value="{StaticResource Brush.Border.Active}" />
+                                        <Setter Property="BorderThickness" Value="1" />
+                                        <Setter Property="Cursor" Value="Hand" />
+                                        <Setter Property="Template">
+                                            <Setter.Value>
+                                                <ControlTemplate TargetType="Button">
+                                                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" 
+                                                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6" SnapsToDevicePixels="True">
+                                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20,0" />
+                                                    </Border>
+                                                    <ControlTemplate.Triggers>
+                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                            <Setter Property="Background" Value="{StaticResource Brush.Background.Hover}" />
+                                                            <Setter Property="BorderBrush" Value="{StaticResource Brush.Accent.Mint}" />
+                                                        </Trigger>
+                                                    </ControlTemplate.Triggers>
+                                                </ControlTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="▶  INICIAR REPLAY" FontWeight="Bold" FontSize="12" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                                </StackPanel>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <!-- Running State -->
+                                            <DataTrigger Binding="{Binding IsEngineRunning}" Value="True">
+                                                <Setter Property="Background" Value="{StaticResource Brush.Accent.Mint}" />
+                                                <Setter Property="Foreground" Value="{StaticResource Brush.Text.OnAccent}" />
+                                                <Setter Property="BorderThickness" Value="0" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}" CornerRadius="6" SnapsToDevicePixels="True">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20,0" />
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsMouseOver" Value="True">
+                                                                    <Setter Property="Background" Value="#7ED6B8" />
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Setter Property="Content">
+                                                    <Setter.Value>
+                                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                            <TextBlock Text="■  DETENER REPLAY" FontWeight="Bold" FontSize="12" Foreground="{StaticResource Brush.Text.OnAccent}" />
+                                                        </StackPanel>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+
+                            <!-- Prominent Settings Button -->
+                            <Button Command="{Binding ToggleSettingsCommand}" Height="46" MinWidth="150" Style="{StaticResource Style.Button.Secondary}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="⚙" FontSize="14" Margin="0,0,8,0" Foreground="{StaticResource Brush.Accent.Mint}" VerticalAlignment="Center" />
+                                    <TextBlock Text="CONFIGURAR" FontWeight="Bold" FontSize="12" Foreground="{StaticResource Brush.Text.Primary}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Prominent Clips Gallery & Discord Button -->
+                            <Button Command="{Binding ToggleGalleryCommand}" Height="46" MinWidth="150" Margin="12,0,0,0" Style="{StaticResource Style.Button.Secondary}">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="🎬" FontSize="14" Margin="0,0,8,0" Foreground="{StaticResource Brush.Accent.Mint}" VerticalAlignment="Center" />
+                                    <TextBlock Text="VER CLIPS" FontWeight="Bold" FontSize="12" Foreground="{StaticResource Brush.Text.Primary}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+
+                        <!-- Quick Action Pills Row -->
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center">
+                            <!-- Gallery Quick Pill -->
+                            <Button Command="{Binding ToggleGalleryCommand}" Style="{StaticResource Style.Button.ActionPill}" Margin="0,0,8,0" ToolTip="Ver y compartir tus clips guardados en Discord">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="🎬" Margin="0,0,6,0" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                    <TextBlock Text="Galería &amp; Discord" />
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Instant Test Save Pill -->
+                            <Button Command="{Binding TriggerInstantSaveCommand}" 
+                                    IsEnabled="{Binding CanSaveClip}"
+                                    Style="{StaticResource Style.Button.ActionPill}" 
+                                    Margin="0,0,8,0" 
+                                    ToolTip="Guarda los últimos segundos a disco ahora mismo (Requiere Replay activo)">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="⚡" Margin="0,0,6,0" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                    <TextBlock Text="Guardar Clip Ahora" />
+                                </StackPanel>
+                            </Button>
+
+                            <!-- Open Clips Folder Pill -->
+                            <Button Command="{Binding OpenClipsFolderCommand}" Style="{StaticResource Style.Button.ActionPill}" ToolTip="Abre la carpeta en el Explorador de Windows">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="📁" Margin="0,0,6,0" />
+                                    <TextBlock Text="Abrir Carpeta de Clips" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- TELEMETRY SUMMARY CARDS -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Card 1: Video Config -->
+                    <Border Grid.Column="0" Background="{StaticResource Brush.Background.Surface}" BorderBrush="{StaticResource Brush.Border.Subtle}" 
+                            BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="0,0,6,0">
+                        <StackPanel>
+                            <TextBlock Text="FORMATO &amp; CALIDAD" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Disabled}" />
+                            <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,2,0,0">
+                                <TextBlock.Text>
+                                    <MultiBinding StringFormat="{}{0} • {1} FPS • {2} Mbps">
+                                        <Binding Path="SelectedResolution" />
+                                        <Binding Path="SelectedFramerate" />
+                                        <Binding Path="SelectedBitrate" />
+                                    </MultiBinding>
+                                </TextBlock.Text>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Card 2: Audio Config -->
+                    <Border Grid.Column="1" Background="{StaticResource Brush.Background.Surface}" BorderBrush="{StaticResource Brush.Border.Subtle}" 
+                            BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="3,0,3,0">
+                        <StackPanel>
+                            <TextBlock Text="CANALES DE AUDIO" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Disabled}" />
+                            <TextBlock FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Accent.Mint}" Margin="0,2,0,0">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="Dual: Juego + Micrófono" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedAudioMode}" Value="GameOnly">
+                                                <Setter Property="Text" Value="Solo Audio del Juego" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SelectedAudioMode}" Value="MicOnly">
+                                                <Setter Property="Text" Value="Solo Micrófono" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Card 3: Storage & Folder -->
+                    <Border Grid.Column="2" Background="{StaticResource Brush.Background.Surface}" BorderBrush="{StaticResource Brush.Border.Subtle}" 
+                            BorderThickness="1" CornerRadius="6" Padding="12,8" Margin="6,0,0,0">
+                        <StackPanel>
+                            <TextBlock Text="ÚLTIMO CLIP GUARDADO" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Disabled}" />
+                            <TextBlock Text="{Binding LastClipSaved}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Secondary}" 
+                                       TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <!-- ANIMATED TOAST NOTIFICATION OVERLAY -->
+                <Border x:Name="ToastOverlay"
+                        Grid.Row="0"
+                        Grid.RowSpan="2"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        Margin="0,0,0,24"
+                        Background="#161922"
+                        BorderBrush="#2B303B"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="18,12"
+                        IsHitTestVisible="False">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#000000" BlurRadius="24" Opacity="0.8" ShadowDepth="6" Direction="270" />
+                    </Border.Effect>
+                    <Border.RenderTransform>
+                        <TranslateTransform x:Name="ToastTransform" Y="24" />
+                    </Border.RenderTransform>
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Opacity" Value="0" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsToastVisible}" Value="True">
+                                    <DataTrigger.EnterActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="1" Duration="0:0:0.3">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                 From="24" To="0" Duration="0:0:0.3">
+                                                    <DoubleAnimation.EasingFunction>
+                                                        <CubicEase EasingMode="EaseOut" />
+                                                    </DoubleAnimation.EasingFunction>
+                                                </DoubleAnimation>
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.EnterActions>
+                                    <DataTrigger.ExitActions>
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Storyboard.TargetProperty="Opacity" To="0" Duration="0:0:0.25" />
+                                                <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)"
+                                                                 To="24" Duration="0:0:0.25" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </DataTrigger.ExitActions>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Background="{StaticResource Brush.Accent.MintGaze}" CornerRadius="4" Padding="6,2" Margin="0,0,10,0">
+                            <TextBlock Text="OURO" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                        </Border>
+                        <TextBlock Text="{Binding ToastMessage}" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ============================================== -->
+                <!-- ADVANCED 3-TAB SETTINGS MODAL DIALOG           -->
+                <!-- ============================================== -->
+                <Grid Grid.Row="0" Grid.RowSpan="3"
+                      Visibility="{Binding IsSettingsPanelOpen, Converter={StaticResource BoolToVisConverter}}"
+                      Margin="-24,-14,-24,-12">
+                    <!-- Semi-transparent backdrop -->
+                    <Border Background="#E6090A0D" />
+
+                    <!-- Centered Modal Settings Card -->
+                    <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="550" MaxHeight="480"
+                            Background="{StaticResource Brush.Background.Surface}"
+                            BorderBrush="{StaticResource Brush.Border.Subtle}"
+                            BorderThickness="1" CornerRadius="12" Padding="24,16">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000" BlurRadius="32" Opacity="0.9" ShadowDepth="10" Direction="270" />
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <!-- Modal Header -->
+                            <Grid Grid.Row="0" Margin="0,0,0,12">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="⚙ PANEL DE CONFIGURACIÓN" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                    <TextBlock Text=" // PARÁMETROS DE CAPTURA" FontSize="11" Foreground="{StaticResource Brush.Text.Secondary}" Margin="6,0,0,0" />
+                                </StackPanel>
+                                <Button HorizontalAlignment="Right" Style="{StaticResource Style.Button.WindowControl}" 
+                                        Command="{Binding ToggleSettingsCommand}" Content="✕" Width="28" Height="28" />
+                            </Grid>
+
+                            <!-- Modern Tab Selector -->
+                            <Border Grid.Row="1" Background="{StaticResource Brush.Background.Deep}" CornerRadius="8" Padding="3" Margin="0,0,0,14">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Tab 0: Video -->
+                                    <RadioButton Grid.Column="0" Content="📺 Video &amp; Calidad" IsChecked="True"
+                                                 Command="{Binding SelectTabCommand}" CommandParameter="0">
+                                        <RadioButton.Style>
+                                            <Style TargetType="RadioButton">
+                                                <Setter Property="Height" Value="32" />
+                                                <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                <Setter Property="FontSize" Value="11" />
+                                                <Setter Property="Cursor" Value="Hand" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="RadioButton">
+                                                            <Border x:Name="TabBorder" Background="Transparent" CornerRadius="6">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsChecked" Value="True">
+                                                                    <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource Brush.Background.Elevated}" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource Brush.Accent.Mint}" />
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </RadioButton.Style>
+                                    </RadioButton>
+
+                                    <!-- Tab 1: Audio & Modo -->
+                                    <RadioButton Grid.Column="1" Content="🎙 Audio &amp; Pantalla"
+                                                 Command="{Binding SelectTabCommand}" CommandParameter="1">
+                                        <RadioButton.Style>
+                                            <Style TargetType="RadioButton">
+                                                <Setter Property="Height" Value="32" />
+                                                <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                <Setter Property="FontSize" Value="11" />
+                                                <Setter Property="Cursor" Value="Hand" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="RadioButton">
+                                                            <Border x:Name="TabBorder" Background="Transparent" CornerRadius="6">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsChecked" Value="True">
+                                                                    <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource Brush.Background.Elevated}" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource Brush.Accent.Mint}" />
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </RadioButton.Style>
+                                    </RadioButton>
+
+                                    <!-- Tab 2: Almacenamiento & Atajos -->
+                                    <RadioButton Grid.Column="2" Content="📁 Disco &amp; Atajo"
+                                                 Command="{Binding SelectTabCommand}" CommandParameter="2">
+                                        <RadioButton.Style>
+                                            <Style TargetType="RadioButton">
+                                                <Setter Property="Height" Value="32" />
+                                                <Setter Property="Foreground" Value="{StaticResource Brush.Text.Secondary}" />
+                                                <Setter Property="FontWeight" Value="SemiBold" />
+                                                <Setter Property="FontSize" Value="11" />
+                                                <Setter Property="Cursor" Value="Hand" />
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="RadioButton">
+                                                            <Border x:Name="TabBorder" Background="Transparent" CornerRadius="6">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                            </Border>
+                                                            <ControlTemplate.Triggers>
+                                                                <Trigger Property="IsChecked" Value="True">
+                                                                    <Setter TargetName="TabBorder" Property="Background" Value="{StaticResource Brush.Background.Elevated}" />
+                                                                    <Setter Property="Foreground" Value="{StaticResource Brush.Accent.Mint}" />
+                                                                </Trigger>
+                                                            </ControlTemplate.Triggers>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </RadioButton.Style>
+                                    </RadioButton>
+                                </Grid>
+                            </Border>
+
+                            <!-- Scrollable Tab Content Area -->
+                            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <Grid>
+                            <!-- ========================================== -->
+                            <!-- TAB 0: VIDEO & CALIDAD                     -->
+                            <!-- ========================================== -->
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="1">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="2">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+
+                                <!-- Resolution Selection -->
+                                <TextBlock Text="Resolución de Captura (Escalado 16:9 automático)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,6" />
+                                <ComboBox ItemsSource="{Binding AvailableResolutions}" SelectedItem="{Binding SelectedResolution}" 
+                                          Style="{StaticResource Style.ComboBox.Dark}" Margin="0,0,0,12">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock FontSize="12">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding}" Value="1080p">
+                                                                <Setter Property="Text" Value="1080p Full HD (1920x1080) — Equilibrado" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="720p">
+                                                                <Setter Property="Text" Value="720p HD (1280x720) — Para PCs de bajo rendimiento" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="1440p">
+                                                                <Setter Property="Text" Value="1440p 2K (2560x1440) — Alta Nitidez" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="4K">
+                                                                <Setter Property="Text" Value="4K Ultra HD (3840x2160) — Máxima Calidad" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <!-- Grid of FPS and Bitrate -->
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- FPS -->
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Tasa de Cuadros (FPS)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,6" />
+                                        <ComboBox ItemsSource="{Binding AvailableFramerates}" SelectedItem="{Binding SelectedFramerate}" 
+                                                  Style="{StaticResource Style.ComboBox.Dark}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding StringFormat='{}{0} FPS'}" FontSize="12" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+
+                                    <!-- Bitrate -->
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Calidad / Bitrate (NVENC)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,6" />
+                                        <ComboBox ItemsSource="{Binding AvailableBitrates}" SelectedItem="{Binding SelectedBitrate}" 
+                                                  Style="{StaticResource Style.ComboBox.Dark}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding StringFormat='{}{0} Mbps'}" FontSize="12" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Buffer Duration -->
+                                <TextBlock Text="Tiempo de Replay a Guardar en RAM" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,6" />
+                                <ComboBox ItemsSource="{Binding AvailableBufferDurations}" SelectedItem="{Binding SelectedBufferDuration}" 
+                                          Style="{StaticResource Style.ComboBox.Dark}" Margin="0,0,0,12">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding StringFormat='{}Últimos {0} segundos'}" FontSize="12" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <!-- GPU HUD Telemetry Overlay Option -->
+                                <Border Background="{StaticResource Brush.Background.Elevated}" BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,8">
+                                    <StackPanel>
+                                        <CheckBox IsChecked="{Binding EnableVideoOverlay, Mode=TwoWay}" Style="{StaticResource Style.CheckBox.Dark}">
+                                            <StackPanel>
+                                                <TextBlock Text="Incrustar Overlay de FPS y Marca en los Clips (DirectX 11)" FontWeight="SemiBold" />
+                                                <TextBlock Text="Añade un discreto badge en la esquina inferior con resolución, FPS y marca (0% uso de CPU)" FontSize="10" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                            </StackPanel>
+                                        </CheckBox>
+                                        <Grid Margin="0,8,0,0" Visibility="{Binding EnableVideoOverlay, Converter={StaticResource BoolToVisConverter}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="12" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="Texto de Marca / Tag" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Secondary}" Margin="0,0,0,2" />
+                                                <TextBox Text="{Binding OverlayCustomText, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Style.TextBox.Dark}" Height="26" MaxLength="12" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="2" IsChecked="{Binding OverlayIncludeTelemetry, Mode=TwoWay}" Style="{StaticResource Style.CheckBox.Dark}" VerticalAlignment="Bottom" Margin="0,0,0,4">
+                                                <TextBlock Text="Mostrar FPS &amp; Res" FontSize="10.5" />
+                                            </CheckBox>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ========================================== -->
+                            <!-- TAB 1: AUDIO & MODO DE PANTALLA            -->
+                            <!-- ========================================== -->
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="1">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+
+                                <!-- Capture Mode Selection -->
+                                <TextBlock Text="Modo de Captura de Video" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,4" />
+                                <ComboBox ItemsSource="{Binding AvailableCaptureModes}" SelectedItem="{Binding SelectedCaptureMode}" 
+                                          Style="{StaticResource Style.ComboBox.Dark}" Margin="0,0,0,8">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock FontSize="12">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding}" Value="Monitor">
+                                                                <Setter Property="Text" Value="🖥 Todo el Monitor / Pantalla Completa (Recomendado)" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="GameOnly">
+                                                                <Setter Property="Text" Value="🎮 Detectar Juego en Primer Plano (Automático)" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="SpecificWindow">
+                                                                <Setter Property="Text" Value="🪟 Ventana Específica (Estilo OBS)" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <!-- OBS Style Window Picker (Visible when SpecificWindow is selected) -->
+                                <StackPanel Visibility="{Binding IsSpecificWindowSelected, Converter={StaticResource BoolToVisConverter}}" Margin="0,0,0,8">
+                                    <Grid Margin="0,0,0,4">
+                                        <TextBlock Text="Ventana de Aplicación / Juego a Capturar" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Accent.Mint}" VerticalAlignment="Center" />
+                                        <Button Command="{Binding RefreshWindowsCommand}" Style="{StaticResource Style.Button.ActionPill}" Height="24" Padding="8,2" HorizontalAlignment="Right" ToolTip="Actualizar lista de ventanas abiertas">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="↻ " FontWeight="Bold" />
+                                                <TextBlock Text="Refrescar Ventanas" FontSize="10" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                    <ComboBox ItemsSource="{Binding AvailableWindows}" SelectedItem="{Binding SelectedWindow}" DisplayMemberPath="DisplayName"
+                                              Style="{StaticResource Style.ComboBox.Dark}" />
+                                </StackPanel>
+
+                                <!-- Multi-Monitor Picker -->
+                                <StackPanel Margin="0,0,0,8">
+                                    <TextBlock Text="Monitor / Pantalla a Capturar" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,4" />
+                                    <ComboBox ItemsSource="{Binding AvailableMonitors}" SelectedItem="{Binding SelectedMonitor}" DisplayMemberPath="DisplayName"
+                                              Style="{StaticResource Style.ComboBox.Dark}" />
+                                </StackPanel>
+
+                                <!-- Audio Tracks Selection -->
+                                <TextBlock Text="Mezcla de Audio a Registrar" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,4" />
+                                <ComboBox ItemsSource="{Binding AvailableAudioModes}" SelectedItem="{Binding SelectedAudioMode}" 
+                                          Style="{StaticResource Style.ComboBox.Dark}" Margin="0,0,0,8">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock FontSize="12">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <Setter Property="Text" Value="{Binding}" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding}" Value="DualTrack">
+                                                                <Setter Property="Text" Value="🎧 Juego + Micrófono (mezclados en una pista)" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="GameOnly">
+                                                                <Setter Property="Text" Value="🔊 Solo Audio del Juego (Silenciar micrófono)" />
+                                                            </DataTrigger>
+                                                            <DataTrigger Binding="{Binding}" Value="MicOnly">
+                                                                <Setter Property="Text" Value="🎙 Solo Micrófono (Comentarios de voz)" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <!-- Audio Devices Grid (Output & Microphone) -->
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Output Device (Playback) -->
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="Dispositivo de Salida (Altavoces / Cascos)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,4" />
+                                        <ComboBox ItemsSource="{Binding AvailableOutputDevices}" SelectedItem="{Binding SelectedOutputDevice}" DisplayMemberPath="Name"
+                                                  Style="{StaticResource Style.ComboBox.Dark}" />
+                                    </StackPanel>
+
+                                    <!-- Input Device (Microphone) -->
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Dispositivo de Entrada (Micrófono)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,4" />
+                                        <ComboBox ItemsSource="{Binding AvailableInputDevices}" SelectedItem="{Binding SelectedInputDevice}" DisplayMemberPath="Name"
+                                                  Style="{StaticResource Style.ComboBox.Dark}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <!-- Independent Volume Regulation (Game & Mic) -->
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="12" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Game Audio Gain Slider -->
+                                    <StackPanel Grid.Column="0">
+                                        <Grid Margin="0,0,0,2">
+                                            <TextBlock Text="Volumen del Juego / PC" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" />
+                                            <TextBlock Text="{Binding GameVolumePercentageText}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" HorizontalAlignment="Right" />
+                                        </Grid>
+                                        <Slider Minimum="0.0" Maximum="2.0" Value="{Binding GameVolume, Mode=TwoWay}" 
+                                                TickFrequency="0.05" IsSnapToTickEnabled="False"
+                                                Style="{StaticResource Style.Slider.Dark}" />
+                                    </StackPanel>
+
+                                    <!-- Microphone Gain Slider -->
+                                    <StackPanel Grid.Column="2">
+                                        <Grid Margin="0,0,0,2">
+                                            <TextBlock Text="Volumen del Micrófono (Ganancia)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" />
+                                            <TextBlock Text="{Binding MicVolumePercentageText}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" HorizontalAlignment="Right" />
+                                        </Grid>
+                                        <Slider Minimum="0.0" Maximum="2.0" Value="{Binding MicVolume, Mode=TwoWay}" 
+                                                TickFrequency="0.05" IsSnapToTickEnabled="False"
+                                                Style="{StaticResource Style.Slider.Dark}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <TextBlock Text="* El audio del sistema se captura mediante WASAPI Loopback de ultra-baja latencia sin pérdida de rendimiento." 
+                                           FontSize="10" Foreground="{StaticResource Brush.Text.Disabled}" TextWrapping="Wrap" Margin="0,0,0,10" />
+
+                                <!-- Multi-Track Audio Checkbox -->
+                                <Border Background="{StaticResource Brush.Background.Elevated}" BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,4">
+                                    <CheckBox IsChecked="{Binding SeparateAudioTracksInMp4, Mode=TwoWay}" Style="{StaticResource Style.CheckBox.Dark}">
+                                        <StackPanel>
+                                            <TextBlock Text="Separar Pistas de Audio en MP4 (Pista 1: Mix, Pista 2: Juego, Pista 3: Mic)" FontWeight="SemiBold" />
+                                            <TextBlock Text="Permite silenciar tu micrófono o música en Premiere, DaVinci o CapCut sin romper Discord ni WhatsApp" FontSize="10" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                        </StackPanel>
+                                    </CheckBox>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- ========================================== -->
+                            <!-- TAB 2: ALMACENAMIENTO & ATAJOS             -->
+                            <!-- ========================================== -->
+                            <StackPanel>
+                                <StackPanel.Style>
+                                    <Style TargetType="StackPanel">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SelectedSettingsTab}" Value="2">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </StackPanel.Style>
+
+                                <!-- Output Directory Path -->
+                                <TextBlock Text="Carpeta de Guardado de Clips" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,6" />
+                                <TextBox Text="{Binding OutputDirectory, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource Style.TextBox.Dark}" Margin="0,0,0,8" />
+
+                                <!-- Drive Quick Select Buttons -->
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                                    <Button Command="{Binding SelectDriveCCommand}" Style="{StaticResource Style.Button.Secondary}" Content="Disco C:\" Height="28" Padding="10,0" Margin="0,0,6,0" />
+                                    <Button Command="{Binding SelectDriveDCommand}" Style="{StaticResource Style.Button.Secondary}" Content="Disco D:\" Height="28" Padding="10,0" Margin="0,0,8,0" />
+                                    <Button Command="{Binding BrowseFolderCommand}" Style="{StaticResource Style.Button.Primary}" Height="28" Padding="12,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <TextBlock Text="📁" Margin="0,0,6,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="Examinar..." VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <!-- Hotkey Selection -->
+                                <TextBlock Text="Tecla de Acceso Rápido (Guardar Clip)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,0,0,6" />
+                                <ComboBox ItemsSource="{Binding AvailableHotkeys}" SelectedItem="{Binding SelectedHotkey}" 
+                                          Style="{StaticResource Style.ComboBox.Dark}" Margin="0,0,0,14">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding StringFormat='{}Atajo: {0}'}" FontSize="12" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+
+                                <!-- System & Experience Preferences -->
+                                <Border Background="{StaticResource Brush.Background.Deep}" CornerRadius="6" Padding="12,10" Margin="0,0,0,6">
+                                    <StackPanel>
+                                        <TextBlock Text="Preferencias de Sistema" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" Margin="0,0,0,8" />
+                                        
+                                        <!-- Start with Windows -->
+                                        <CheckBox IsChecked="{Binding StartWithWindows, Mode=TwoWay}" Style="{StaticResource Style.CheckBox.Dark}" Margin="0,0,0,8">
+                                            <StackPanel>
+                                                <TextBlock Text="Iniciar con Windows (Minimizado en bandeja)" FontWeight="SemiBold" />
+                                                <TextBlock Text="Ouro arrancará silenciosamente en segundo plano listo para clipear" FontSize="10" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                            </StackPanel>
+                                        </CheckBox>
+
+                                        <!-- Sound on Clip -->
+                                        <CheckBox IsChecked="{Binding PlaySoundOnClip, Mode=TwoWay}" Style="{StaticResource Style.CheckBox.Dark}">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding SelectedHotkey, StringFormat='Sonido háptico de confirmación al clipear ({0})'}" FontWeight="SemiBold" />
+                                                <TextBlock Text="Emite un sutil pitido en tus auriculares cuando el clip se guarda" FontSize="10" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                            </StackPanel>
+                                        </CheckBox>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- License & HWID Activation Card -->
+                                <Border Background="{StaticResource Brush.Background.Deep}" CornerRadius="6" Padding="12,10" Margin="0,8,0,6">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                                <TextBlock Text="Licencia y Activación" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                                <Border Background="{StaticResource Brush.Accent.MintGaze}" CornerRadius="3" Padding="4,1" Margin="8,0,0,0">
+                                                    <TextBlock Text="{Binding LicenseBadgeText}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding CurrentHwidText, StringFormat='{}HWID: {0}'}" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1" Command="{Binding RenewLicenseCommand}" Style="{StaticResource Style.Button.ActionPill}" Height="28" Padding="10,0" ToolTip="Ingresar una nueva clave de licencia (ej: pasar de Mensual a Lifetime)">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="🔑 " FontSize="10" />
+                                                <TextBlock Text="Cambiar Clave" FontSize="10" />
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                                </Grid>
+                            </ScrollViewer>
+
+                            <!-- Modal Action Buttons Footer (Always Pinned & Visible) -->
+                            <Grid Grid.Row="3" Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Style="{StaticResource Style.Button.Secondary}" 
+                                        Command="{Binding ToggleSettingsCommand}" Content="Cancelar" Height="38" Margin="0,0,10,0" />
+                                <Button Grid.Column="1" Style="{StaticResource Style.Button.Primary}" 
+                                        Command="{Binding SaveSettingsCommand}" Content="Guardar Ajustes" Width="150" Height="38" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- ============================================== -->
+                <!-- CLIPS GALLERY & DISCORD SHARING MODAL DIALOG   -->
+                <!-- ============================================== -->
+                <Grid Grid.Row="0" Grid.RowSpan="3"
+                      Visibility="{Binding IsGalleryOpen, Converter={StaticResource BoolToVisConverter}}"
+                      Margin="-24,-14,-24,-12">
+                    <!-- Semi-transparent backdrop -->
+                    <Border Background="#E6090A0D" />
+
+                    <!-- Centered Modal Gallery Card -->
+                    <Border HorizontalAlignment="Center" VerticalAlignment="Center" Width="820" Height="560"
+                            Background="{StaticResource Brush.Background.Surface}"
+                            BorderBrush="{StaticResource Brush.Border.Subtle}"
+                            BorderThickness="1" CornerRadius="12" Padding="20">
+                        <Border.Effect>
+                            <DropShadowEffect Color="#000000" BlurRadius="32" Opacity="0.9" ShadowDepth="10" Direction="270" />
+                        </Border.Effect>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <!-- Modal Header -->
+                                <RowDefinition Height="Auto" />
+                                <!-- Discord Webhook Configuration Bar -->
+                                <RowDefinition Height="Auto" />
+                                <!-- Gallery Body (List + Details) -->
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+
+                            <!-- 1. Header -->
+                            <Grid Grid.Row="0" Margin="0,0,0,12">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="🎬 GALERÍA DE CLIPS" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                    <TextBlock Text=" // REVISIÓN &amp; COMPARTIR" FontSize="11" Foreground="{StaticResource Brush.Text.Secondary}" Margin="6,0,0,0" />
+                                    <Border Background="{StaticResource Brush.Background.Elevated}" CornerRadius="10" Padding="8,2" Margin="12,0,0,0">
+                                        <TextBlock Text="{Binding ClipsCountText}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                    </Border>
+                                    <Border Background="{StaticResource Brush.Background.Elevated}" CornerRadius="10" Padding="8,2" Margin="8,0,0,0" ToolTip="Espacio disponible en la unidad de almacenamiento de clips">
+                                        <TextBlock Text="{Binding FreeDiskSpaceText}" FontSize="10" FontWeight="Bold" Foreground="{Binding DiskSpaceForeground}" />
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <Button Command="{Binding RefreshClipsCommand}" Style="{StaticResource Style.Button.ActionPill}" Height="28" Padding="10,0" Margin="0,0,8,0" ToolTip="Refrescar lista de clips">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="⟳ " FontWeight="Bold" />
+                                            <TextBlock Text="Refrescar" FontSize="10" />
+                                        </StackPanel>
+                                    </Button>
+                                    <Button HorizontalAlignment="Right" Style="{StaticResource Style.Button.WindowControl}" 
+                                            Command="{Binding ToggleGalleryCommand}" Content="✕" Width="28" Height="28" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- 2. Discord Webhook Config Bar -->
+                            <Border Grid.Row="1" Background="#121824" BorderBrush="#3000FFA3" BorderThickness="1" CornerRadius="8" Padding="12,8" Margin="0,0,0,12">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Discord Badge -->
+                                    <Border Grid.Row="0" Grid.Column="0" Background="#255865F2" BorderBrush="#805865F2" BorderThickness="1" CornerRadius="4" Padding="6,2" Margin="0,0,10,0" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🚀 DISCORD WEBHOOK" FontSize="10" FontWeight="Bold" Foreground="#5865F2" />
+                                        </StackPanel>
+                                    </Border>
+
+                                    <!-- Webhook URL Input -->
+                                    <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding DiscordWebhookUrl, UpdateSourceTrigger=PropertyChanged}"
+                                             Style="{StaticResource Style.TextBox.Dark}" Height="28" Margin="0,0,8,0"
+                                             ToolTip="Pega aquí la URL del Webhook creado en tu servidor de Discord (ej: https://discord.com/api/webhooks/...)" />
+
+                                    <!-- Discord Limit Selector -->
+                                    <ComboBox Grid.Row="0" Grid.Column="2"
+                                              ItemsSource="{Binding AvailableDiscordLimits}"
+                                              SelectedItem="{Binding SelectedDiscordLimitOption}"
+                                              DisplayMemberPath="Label"
+                                              Style="{StaticResource Style.ComboBox.Dark}"
+                                              Height="28" Width="135" Margin="0,0,8,0"
+                                              ToolTip="Límite máximo para subir a Discord. Si un clip supera este tamaño, Ouro lo optimiza automáticamente." />
+
+                                    <!-- Test Connection Button -->
+                                    <Button Grid.Row="0" Grid.Column="3" Command="{Binding TestDiscordWebhookCommand}"
+                                            Style="{StaticResource Style.Button.Secondary}" Height="28" Padding="10,0" Margin="0,0,8,0"
+                                            ToolTip="Envía un mensaje de prueba al canal de Discord para verificar la conexión">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="🔔 Probar" FontSize="10" FontWeight="Bold" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Post Manual Button -->
+                                    <Button Grid.Row="0" Grid.Column="4" Command="{Binding PostManualCommand}"
+                                            Style="{StaticResource Style.Button.Secondary}" Height="28" Padding="10,0"
+                                            ToolTip="Publica el Manual de Uso oficial 'Cómo usar Ouro' en Discord para poder fijarlo">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="📖 Publicar Manual" FontSize="10" FontWeight="Bold" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <!-- Status Text -->
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" Text="{Binding DiscordStatusMessage}"
+                                               FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource Brush.Accent.Mint}" Margin="2,4,0,0" />
+                                </Grid>
+                            </Border>
+
+                            <!-- 3. Main Gallery Layout: GeForce Experience Folder Navigation & Clip View -->
+                            <Grid Grid.Row="2">
+                                <!-- VIEW A: Game Folders Grid (When NOT inside a specific game folder) -->
+                                <Grid>
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsInsideGameFolder}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Folders Subheader -->
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2,0,0,10">
+                                        <TextBlock Text="📂 SELECCIONA UNA CARPETA DE JUEGO" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Secondary}" />
+                                        <TextBlock Text=" // ORDENADO POR JUEGOS" FontSize="10" Foreground="{StaticResource Brush.Text.Disabled}" Margin="6,0,0,0" />
+                                    </StackPanel>
+
+                                    <!-- Empty State if 0 clips -->
+                                    <StackPanel Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                        <StackPanel.Style>
+                                            <Style TargetType="StackPanel">
+                                                <Setter Property="Visibility" Value="Collapsed" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding GameFolders.Count}" Value="0">
+                                                        <Setter Property="Visibility" Value="Visible" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </StackPanel.Style>
+                                        <TextBlock Text="📁" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,10" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                        <TextBlock Text="No se encontraron clips guardados" FontSize="13" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Secondary}" HorizontalAlignment="Center" />
+                                        <TextBlock Text="{Binding SelectedHotkey, StringFormat='Presiona {0} mientras juegas para capturar y organizar clips automáticamente en sus carpetas.'}" 
+                                                   FontSize="11" Foreground="{StaticResource Brush.Text.Disabled}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0" MaxWidth="360" />
+                                    </StackPanel>
+
+                                    <!-- Game Folders Wrap Grid -->
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                        <ItemsControl ItemsSource="{Binding GameFolders}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Command="{Binding DataContext.SelectGameFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                            CommandParameter="{Binding}"
+                                                            Width="246" Height="110" Margin="0,0,14,14"
+                                                            Cursor="Hand">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Border x:Name="CardBorder" Background="#0C121A" BorderBrush="#26FFFFFF" BorderThickness="1" CornerRadius="8" Padding="14,12" SnapsToDevicePixels="True">
+                                                                    <Grid>
+                                                                        <Grid.RowDefinitions>
+                                                                            <RowDefinition Height="Auto" />
+                                                                            <RowDefinition Height="*" />
+                                                                            <RowDefinition Height="Auto" />
+                                                                        </Grid.RowDefinitions>
+                                                                        <!-- Top: Icon & Count Badge -->
+                                                                        <Grid Grid.Row="0">
+                                                                            <TextBlock Text="🎮" FontSize="14" HorizontalAlignment="Left" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                                                            <Border HorizontalAlignment="Right" Background="#2000FFA3" BorderBrush="#6000FFA3" BorderThickness="1" CornerRadius="4" Padding="6,1.5">
+                                                                                <TextBlock Text="{Binding ClipCount, StringFormat='{}{0} CLIPS'}" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                                                            </Border>
+                                                                        </Grid>
+                                                                        <!-- Middle: Game Title -->
+                                                                        <TextBlock Grid.Row="1" Text="{Binding GameName}" FontSize="13.5" FontWeight="Black" Foreground="{StaticResource Brush.Text.Primary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                                                        <!-- Bottom: Size & Activity -->
+                                                                        <StackPanel Grid.Row="2" Orientation="Horizontal">
+                                                                            <TextBlock Text="{Binding TotalSizeFormatted}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Secondary}" />
+                                                                            <TextBlock Text=" • " FontSize="10" Foreground="{StaticResource Brush.Text.Disabled}" Margin="3,0" />
+                                                                            <TextBlock Text="{Binding LatestClipRelative, StringFormat='{}Último: {0}'}" FontSize="9.5" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                                                        </StackPanel>
+                                                                    </Grid>
+                                                                </Border>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="CardBorder" Property="Background" Value="#142130" />
+                                                                        <Setter TargetName="CardBorder" Property="BorderBrush" Value="{StaticResource Brush.Accent.Mint}" />
+                                                                        <Setter TargetName="CardBorder" Property="BorderThickness" Value="1.5" />
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+
+                                <!-- VIEW B: Inside Selected Game Folder (List of Clips + Video Player / Discord Actions) -->
+                                <Grid>
+                                    <Grid.Style>
+                                        <Style TargetType="Grid">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsInsideGameFolder}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Grid.Style>
+                                    <Grid.RowDefinitions>
+                                        <!-- Folder Navigation Breadcrumb -->
+                                        <RowDefinition Height="Auto" />
+                                        <!-- Clips Columns -->
+                                        <RowDefinition Height="*" />
+                                    </Grid.RowDefinitions>
+
+                                    <!-- Navigation Breadcrumb & Back Button -->
+                                    <Grid Grid.Row="0" Margin="0,0,0,10">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Command="{Binding BackToGameFoldersCommand}"
+                                                    Style="{StaticResource Style.Button.Secondary}" Height="28" Padding="10,0" Margin="0,0,10,0"
+                                                    ToolTip="Regresar a la vista de carpetas por juego">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="← " FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                                    <TextBlock Text="Volver a Carpetas" FontSize="10" FontWeight="Bold" />
+                                                </StackPanel>
+                                            </Button>
+
+                                            <TextBlock Text="📂 " FontSize="12" Foreground="{StaticResource Brush.Accent.Mint}" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding SelectedGameFolder.GameName}" FontSize="12" FontWeight="Black" Foreground="{StaticResource Brush.Text.Primary}" VerticalAlignment="Center" />
+                                            <Border Background="{StaticResource Brush.Background.Elevated}" CornerRadius="8" Padding="6,1.5" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding FilteredClipsList.Count, StringFormat='{}{0} clips'}" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                            </Border>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <!-- Inside Folder: 2 Columns (Left: Game Clips List, Right: Selected Clip & Share) -->
+                                    <Grid Grid.Row="1">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="340" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+
+                                        <!-- Left Column: Filtered Clips for this Game -->
+                                        <Border Grid.Column="0" Background="{StaticResource Brush.Background.Elevated}"
+                                                BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="8" Padding="8" Margin="0,0,10,0">
+                                            <ListBox ItemsSource="{Binding FilteredClipsList}" SelectedItem="{Binding SelectedClip}"
+                                                     Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                                <ListBox.ItemContainerStyle>
+                                                    <Style TargetType="ListBoxItem">
+                                                        <Setter Property="Background" Value="Transparent" />
+                                                        <Setter Property="BorderThickness" Value="0" />
+                                                        <Setter Property="Padding" Value="0" />
+                                                        <Setter Property="Margin" Value="0,0,0,4" />
+                                                        <Setter Property="Template">
+                                                            <Setter.Value>
+                                                                <ControlTemplate TargetType="ListBoxItem">
+                                                                    <Border x:Name="ItemBorder" Background="#0C1017" BorderBrush="#20FFFFFF" BorderThickness="1" CornerRadius="6" Padding="10,8" SnapsToDevicePixels="True">
+                                                                        <ContentPresenter />
+                                                                    </Border>
+                                                                    <ControlTemplate.Triggers>
+                                                                        <Trigger Property="IsMouseOver" Value="True">
+                                                                            <Setter TargetName="ItemBorder" Property="Background" Value="#15202E" />
+                                                                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource Brush.Accent.Mint}" />
+                                                                        </Trigger>
+                                                                        <Trigger Property="IsSelected" Value="True">
+                                                                            <Setter TargetName="ItemBorder" Property="Background" Value="#1A2B3D" />
+                                                                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource Brush.Accent.Mint}" />
+                                                                            <Setter TargetName="ItemBorder" Property="BorderThickness" Value="1.5" />
+                                                                        </Trigger>
+                                                                    </ControlTemplate.Triggers>
+                                                                </ControlTemplate>
+                                                            </Setter.Value>
+                                                        </Setter>
+                                                    </Style>
+                                                </ListBox.ItemContainerStyle>
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Grid>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                                <RowDefinition Height="Auto" />
+                                                            </Grid.RowDefinitions>
+                                                            <!-- Top Row: Game Badge + Relative Time -->
+                                                            <Grid Grid.Row="0">
+                                                                <Border HorizontalAlignment="Left" Background="#2000FFA3" BorderBrush="#6000FFA3" BorderThickness="1" CornerRadius="3" Padding="5,1">
+                                                                    <TextBlock Text="{Binding GameName}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                                                </Border>
+                                                                <TextBlock Grid.Row="0" Text="{Binding RelativeTime}" HorizontalAlignment="Right" FontSize="9" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                                            </Grid>
+                                                            <!-- Middle Row: File Name -->
+                                                            <TextBlock Grid.Row="1" Text="{Binding FileName}" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Text.Primary}" TextTrimming="CharacterEllipsis" Margin="0,4,0,2" />
+                                                            <!-- Bottom Row: Size + Exact Date -->
+                                                            <StackPanel Grid.Row="2" Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding FileSizeFormatted}" FontSize="9.5" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Secondary}" />
+                                                                <TextBlock Text=" • " FontSize="9" Foreground="{StaticResource Brush.Text.Disabled}" Margin="2,0" />
+                                                                <TextBlock Text="{Binding CreationTimeFormatted}" FontSize="9" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </Border>
+
+                                        <!-- Right Column: Selected Clip Details & Action Panel -->
+                                        <Border Grid.Column="1" Background="{StaticResource Brush.Background.Elevated}"
+                                                BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="1" CornerRadius="8" Padding="16">
+                                            <Grid>
+                                                <!-- No Clip Selected State -->
+                                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                    <StackPanel.Style>
+                                                        <Style TargetType="StackPanel">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedClip}" Value="{x:Null}">
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </StackPanel.Style>
+                                                    <TextBlock Text="🎬" FontSize="36" HorizontalAlignment="Center" Margin="0,0,0,10" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                                    <TextBlock Text="Selecciona un clip de la lista" FontSize="13" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Secondary}" HorizontalAlignment="Center" />
+                                                    <TextBlock Text="Haz clic en cualquier clip de la izquierda para reproducirlo o compartirlo en Discord." FontSize="11" Foreground="{StaticResource Brush.Text.Disabled}" TextWrapping="Wrap" TextAlignment="Center" Margin="0,6,0,0" MaxWidth="280" />
+                                                </StackPanel>
+
+                                                <!-- Selected Clip Content -->
+                                                <Grid>
+                                                    <Grid.Style>
+                                                        <Style TargetType="Grid">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding SelectedClip}" Value="{x:Null}">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Grid.Style>
+                                                    <Grid.RowDefinitions>
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="Auto" />
+                                                        <RowDefinition Height="*" />
+                                                        <RowDefinition Height="Auto" />
+                                                    </Grid.RowDefinitions>
+
+                                                    <!-- Game & Title Header -->
+                                                    <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                                                        <Border HorizontalAlignment="Left" Background="#2500FFA3" BorderBrush="#8000FFA3" BorderThickness="1" CornerRadius="4" Padding="8,2" Margin="0,0,0,6">
+                                                            <TextBlock Text="{Binding SelectedClip.GameName}" FontSize="12" FontWeight="Black" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                                        </Border>
+                                                        <TextBlock Text="{Binding SelectedClip.FileName}" FontSize="13" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Primary}" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Text="{Binding SelectedClip.FilePath}" FontSize="9.5" Foreground="{StaticResource Brush.Text.Disabled}" TextTrimming="CharacterEllipsis" Margin="0,2,0,0" />
+                                                    </StackPanel>
+
+                                                    <!-- Metadata Cards -->
+                                                    <UniformGrid Grid.Row="1" Columns="2" Margin="0,0,0,14">
+                                                        <Border Background="#10151E" BorderBrush="#20FFFFFF" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,6,0">
+                                                            <StackPanel>
+                                                                <TextBlock Text="PESO DEL ARCHIVO" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                                                <TextBlock Text="{Binding SelectedClip.FileSizeFormatted}" FontSize="14" FontWeight="Black" Foreground="{StaticResource Brush.Accent.Mint}" Margin="0,2,0,0" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                        <Border Background="#10151E" BorderBrush="#20FFFFFF" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="6,0,0,0">
+                                                            <StackPanel>
+                                                                <TextBlock Text="FECHA DE CAPTURA" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Disabled}" />
+                                                                <TextBlock Text="{Binding SelectedClip.CreationTimeFormatted}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Primary}" Margin="0,4,0,0" />
+                                                            </StackPanel>
+                                                        </Border>
+                                                    </UniformGrid>
+
+                                                    <!-- Action Buttons -->
+                                                    <StackPanel Grid.Row="3">
+                                                        <!-- Play Video Button -->
+                                                        <Button Command="{Binding PlayClipCommand}" Height="40" Margin="0,0,0,8" Style="{StaticResource Style.Button.Secondary}">
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <TextBlock Text="▶ " FontSize="13" Foreground="{StaticResource Brush.Accent.Mint}" />
+                                                                <TextBlock Text="REPRODUCIR VIDEO" FontWeight="Bold" FontSize="11" />
+                                                            </StackPanel>
+                                                        </Button>
+
+                                                        <!-- Share on Discord Button (Glowing Hero Button) -->
+                                                        <Button Command="{Binding ShareToDiscordCommand}" Height="44" Margin="0,0,0,8"
+                                                                Style="{StaticResource Style.Button.Primary}">
+                                                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                                                <TextBlock Text="🚀 " FontSize="14" />
+                                                                <TextBlock Text="COMPARTIR EN DISCORD" FontWeight="Black" FontSize="11" />
+                                                            </StackPanel>
+                                                        </Button>
+
+                                                        <!-- Secondary Tools Row -->
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Button Grid.Column="0" Command="{Binding OpenClipFolderCommand}" Style="{StaticResource Style.Button.ActionPill}" Height="30" Margin="0,0,4,0" ToolTip="Ver archivo en el Explorador de Windows">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="📁 " Margin="0,0,4,0" />
+                                                                    <TextBlock Text="Abrir Carpeta" FontSize="10" />
+                                                                </StackPanel>
+                                                            </Button>
+                                                            <Button Grid.Column="1" Command="{Binding DeleteClipCommand}" Style="{StaticResource Style.Button.ActionPill}" Height="30" Margin="4,0,0,0" ToolTip="Eliminar clip permanentemente">
+                                                                <StackPanel Orientation="Horizontal">
+                                                                    <TextBlock Text="🗑 " Margin="0,0,4,0" Foreground="#FF6B6B" />
+                                                                    <TextBlock Text="Eliminar Clip" FontSize="10" Foreground="#FF6B6B" />
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+
+            <!-- Telemetry Footer Bar -->
+            <Border Grid.Row="2" Background="{StaticResource Brush.Background.Surface}" CornerRadius="0,0,12,12"
+                    BorderBrush="{StaticResource Brush.Border.Subtle}" BorderThickness="0,1,0,0" Padding="20,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <!-- License Status Pill -->
+                        <Border Background="{StaticResource Brush.Accent.MintGaze}" BorderBrush="{StaticResource Brush.Accent.MintMuted}" BorderThickness="1" CornerRadius="4" Padding="7,2" Margin="0,0,14,0">
+                            <TextBlock Text="{Binding LicenseBadgeText}" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                        </Border>
+                        <TextBlock Text="ESCRITURA EN DISCO: 0 MB/S (100% BUFFER EN RAM)" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Brush.Text.Secondary}" />
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="1" Text="{Binding EngineHardwareStatusText}" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+</Window>
