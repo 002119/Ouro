@@ -44,6 +44,7 @@ internal static class Program
         Check("Token round trip", LicenseFormat.TryParse(LicenseFormat.ToToken(envelope), out var parsed, out _) && parsed!.Signature == envelope.Signature && LicenseFormat.BuildPayload(parsed) == LicenseFormat.BuildPayload(envelope));
         envelope.Plan = "Monthly";
         Check("Changing plan invalidates signature", !rsa.VerifyData(LicenseFormat.BuildPayloadBytes(envelope), Convert.FromBase64String(envelope.Signature), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1));
+        Check("Annual LicenseModel exposes remaining days cleanly", new LicenseModel { Plan = "Annual", ExpiresAt = DateTime.UtcNow.AddDays(364.2) }.DaysRemaining == 365 && new LicenseModel { Plan = "Monthly", ExpiresAt = DateTime.UtcNow.AddDays(10.1) }.DaysRemaining == 11);
 
         var audio = new AudioRamBuffer(new WaveFormat(8000, 16, 1), 1);
         var bytes = Enumerable.Range(0, 24000).Select(i => (byte)(i % 251)).ToArray();

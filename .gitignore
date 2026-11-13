@@ -44,3 +44,6 @@ Subir_A_GitHub.bat
 AUDITORIA*.md
 RESULTADOS*
 Tools/Repair-Shortcut.ps1
+
+# Discord Bot / Cloudflare Worker ops & secrets (keep local/private)
+Tools/SkyxDiscordWorker/

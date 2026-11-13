@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Media;
 using System.Threading.Tasks;
@@ -55,6 +56,21 @@ namespace Ouro.Views
                 BtnCopyHwid.Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#1E2330"));
             }
             catch { }
+        }
+
+        private void OnOpenDiscordClick(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo("https://discord.gg/kB4uTYBRqD")
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                ShowError($"No se pudo abrir el navegador: {ex.Message}");
+            }
         }
 
         private void OnKeyTextChanged(object sender, TextChangedEventArgs e)
@@ -141,17 +157,11 @@ namespace Ouro.Views
             InputPanel.Visibility = Visibility.Collapsed;
             DecryptOverlay.Visibility = Visibility.Visible;
 
-            // Update Badge Text based on Plan
-            if (license.IsLifetime)
-            {
-                TxtBadgeTitle.Text = "✦ LICENCIA PERMANENTE VERIFICADA ✦";
-                TxtBadgeSubtitle.Text = "// MOTOR DE REPETICIÓN EN RAM DESBLOQUEADO";
-            }
-            else
-            {
-                TxtBadgeTitle.Text = "✦ LICENCIA PREMIUM ACTIVA ✦";
-                TxtBadgeSubtitle.Text = $"// VÁLIDA HASTA {license.ExpiresAt:dd/MM/yyyy}";
-            }
+            // Update Badge Text (Annual 1-year license)
+            TxtBadgeTitle.Text = "✦ LICENCIA ANUAL ACTIVA ✦";
+            TxtBadgeSubtitle.Text = license.ExpiresAt.HasValue
+                ? $"// VÁLIDA HASTA {license.ExpiresAt:dd/MM/yyyy}"
+                : "// MOTOR DE REPETICIÓN EN RAM DESBLOQUEADO";
 
             // Play audio confirmation chime
             try

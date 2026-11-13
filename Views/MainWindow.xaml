@@ -114,7 +114,7 @@
                         </Grid>
                         <TextBlock Text="Ouro Replay" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Brush.Text.Primary}" />
                         <Border Background="{StaticResource Brush.Background.Elevated}" CornerRadius="4" Padding="6,2" Margin="10,0,0,0">
-                            <TextBlock Text="SKYX GAMING ENGINE" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                            <TextBlock Text="SKYX LABS • v1.1" FontSize="9" FontWeight="Bold" Foreground="{StaticResource Brush.Accent.Mint}" />
                         </Border>
                     </StackPanel>
 
@@ -1057,7 +1057,7 @@
                                             </StackPanel>
                                             <TextBlock Text="{Binding CurrentHwidText, StringFormat='{}HWID: {0}'}" FontSize="10" FontFamily="Consolas" Foreground="{StaticResource Brush.Text.Disabled}" />
                                         </StackPanel>
-                                        <Button Grid.Column="1" Command="{Binding RenewLicenseCommand}" Style="{StaticResource Style.Button.ActionPill}" Height="28" Padding="10,0" ToolTip="Ingresar una nueva clave de licencia (ej: pasar de Mensual a Lifetime)">
+                                        <Button Grid.Column="1" Command="{Binding RenewLicenseCommand}" Style="{StaticResource Style.Button.ActionPill}" Height="28" Padding="10,0" ToolTip="Ingresar o renovar tu clave de licencia anual">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock Text="🔑 " FontSize="10" />
                                                 <TextBlock Text="Cambiar Clave" FontSize="10" />

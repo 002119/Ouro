@@ -79,5 +79,5 @@ La reescritura de historial es destructiva y debe coordinarse con todo el equipo
 - La firma usa RSA-2048 con PKCS#1 v1.5 y SHA-256.
 - El payload canónico es `Version|Product|HWID|Plan|IssuedAtUnix|ExpiresAtUnix|Nonce`.
 - El cliente solo lleva la clave pública; no puede emitir licencias nuevas.
-- Cada licencia está vinculada al HWID del equipo y, si es mensual, a una fecha de vencimiento.
+- Cada licencia está vinculada al HWID del equipo y, si es anual, a una fecha de vencimiento.
 - Las claves legacy de 12 caracteres basadas en HMAC quedaron obsoletas y se rechazan.

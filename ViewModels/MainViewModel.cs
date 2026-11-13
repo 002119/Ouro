@@ -1388,10 +1388,11 @@ namespace Ouro.ViewModels
                 if (_licenseManager?.CurrentLicense != null)
                 {
                     var lic = _licenseManager.CurrentLicense;
-                    if (lic.IsLifetime) return "✦ LICENCIA: LIFETIME";
-                    return $"✦ LICENCIA: MENSUAL ({lic.DaysRemaining} DÍAS)";
+                    int days = lic.DaysRemaining;
+                    string dayUnit = days == 1 ? "DÍA" : "DÍAS";
+                    return $"✦ LICENCIA: ANUAL ({days} {dayUnit})";
                 }
-                return "✦ LICENCIA: ACTIVA";
+                return "✦ LICENCIA: ANUAL";
             }
         }
 

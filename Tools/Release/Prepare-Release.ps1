@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [switch]$SelfContained
+)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\..'))
@@ -11,8 +13,19 @@ if (Test-Path -LiteralPath $reviewRoot) { throw 'La carpeta de revision ya exist
 New-Item -ItemType Directory -Path $payload | Out-Null
 Push-Location $repoRoot
 try {
-    & dotnet publish (Join-Path $repoRoot 'Ouro.csproj') -c Release --no-restore `
-        '-p:IntermediateOutputPath=obj/ReleaseReview/' '-p:PublishDir=' -o $payload
+    $publishArgs = @(
+        'publish', (Join-Path $repoRoot 'Ouro.csproj'),
+        '-c', 'Release',
+        '--no-restore',
+        '-p:IntermediateOutputPath=obj/ReleaseReview/',
+        '-p:PublishDir='
+    )
+    if ($SelfContained) {
+        $publishArgs += @('-r', 'win-x64', '--self-contained', 'true')
+    }
+    $publishArgs += @('-o', $payload)
+
+    & dotnet @publishArgs
     if ($LASTEXITCODE -ne 0) { throw 'Fallo la publicacion; no se genera un paquete aprobado.' }
 
     # Resolve package metadata from the actual restored dependency graph.
@@ -64,7 +77,7 @@ try {
         BuiltAtUtc = [DateTime]::UtcNow.ToString('o')
         BaseCommit = (& git rev-parse HEAD)
         IncludesUncommittedChanges = [bool]@(& git status --porcelain).Count
-        SelfContained = $false
+        SelfContained = [bool]$SelfContained
         Payload = 'Ouro'
         Files = @($manifest)
     } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $reviewRoot 'manifest.json') -Encoding UTF8

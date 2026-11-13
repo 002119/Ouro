@@ -1,7 +1,7 @@
 ; Script generated for Ouro Replay Engine Installer
 #define MyAppName "Ouro Replay Engine"
-#define MyAppVersion "1.0.0"
-#define MyAppPublisher "Skyx Gaming"
+#define MyAppVersion "1.1.0"
+#define MyAppPublisher "SKYX Labs"
 #define MyAppURL "https://github.com/002119/Ouro"
 #define MyAppExeName "Ouro.exe"
 
@@ -17,7 +17,7 @@ DefaultDirName={autopf}\Ouro
 DisableProgramGroupPage=yes
 DefaultGroupName={#MyAppName}
 OutputDir=..\dist
-OutputBaseFilename=Ouro_Setup_v1.0.0
+OutputBaseFilename=Ouro_Setup_v1.1.0
 SetupIconFile=..\Resources\icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -25,10 +25,10 @@ WizardStyle=modern
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 UninstallDisplayIcon={app}\{#MyAppExeName}
-VersionInfoVersion=1.0.0.0
-VersionInfoCompany=Skyx Gaming
+VersionInfoVersion=1.1.0.0
+VersionInfoCompany=SKYX Labs
 VersionInfoDescription=Instalador oficial de Ouro Replay Engine
-VersionInfoCopyright=Copyright (C) 2026 Skyx Gaming
+VersionInfoCopyright=Copyright (C) 2026 SKYX Labs
 
 [Languages]
 Name: "spanish"; MessagesFile: "compiler:Languages\Spanish.isl"

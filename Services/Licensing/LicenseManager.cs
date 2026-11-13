@@ -121,9 +121,15 @@ namespace Ouro.Services.Licensing
                 return (false, "La licencia está vinculada a otro equipo (HWID distinto).", null);
             }
 
-            bool isLifetime = string.Equals(envelope.Plan, "Lifetime", StringComparison.OrdinalIgnoreCase);
-            bool isMonthly = string.Equals(envelope.Plan, "Monthly", StringComparison.OrdinalIgnoreCase);
-            if (!isLifetime && !isMonthly)
+            if (string.Equals(envelope.Plan, "Lifetime", StringComparison.OrdinalIgnoreCase))
+            {
+                return (false, "Las licencias Lifetime están deshabilitadas por ahora. Usa una licencia anual de 1 año.", null);
+            }
+
+            bool isAnnual = string.Equals(envelope.Plan, "Annual", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(envelope.Plan, "Anual", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(envelope.Plan, "Monthly", StringComparison.OrdinalIgnoreCase);
+            if (!isAnnual)
             {
                 return (false, "Tipo de licencia desconocido.", null);
             }
@@ -150,48 +156,43 @@ namespace Ouro.Services.Licensing
                 return (false, "La licencia tiene una fecha de emisión futura.", null);
             }
 
-            DateTime? expiresAt = null;
-            if (!isLifetime)
+            if (!envelope.ExpiresAt.HasValue || envelope.ExpiresAt.Value <= 0)
             {
-                if (!envelope.ExpiresAt.HasValue || envelope.ExpiresAt.Value <= 0)
-                {
-                    return (false, "La licencia mensual no tiene fecha de vencimiento.", null);
-                }
+                return (false, "La licencia anual no tiene fecha de vencimiento.", null);
+            }
 
-                try
-                {
-                    expiresAt = DateTimeOffset.FromUnixTimeSeconds(envelope.ExpiresAt.Value).UtcDateTime;
-                }
-                catch
-                {
-                    return (false, "La fecha de vencimiento de la licencia está fuera de rango.", null);
-                }
+            DateTime expiresAt;
+            try
+            {
+                expiresAt = DateTimeOffset.FromUnixTimeSeconds(envelope.ExpiresAt.Value).UtcDateTime;
+            }
+            catch
+            {
+                return (false, "La fecha de vencimiento de la licencia está fuera de rango.", null);
+            }
 
-                if (expiresAt.Value <= issuedAt)
-                {
-                    return (false, "La fecha de vencimiento es anterior a la emisión.", null);
-                }
+            if (expiresAt <= issuedAt)
+            {
+                return (false, "La fecha de vencimiento es anterior a la emisión.", null);
+            }
 
-                if (DateTime.UtcNow > expiresAt.Value)
-                {
-                    return (false, $"Esta licencia expiró el {expiresAt.Value.ToLocalTime():dd/MM/yyyy}.", null);
-                }
+            if (DateTime.UtcNow > expiresAt)
+            {
+                return (false, $"Esta licencia expiró el {expiresAt.ToLocalTime():dd/MM/yyyy}.", null);
             }
 
             var model = new LicenseModel
             {
                 Version = envelope.Version,
                 Hwid = currentHwid,
-                Plan = isLifetime ? "Lifetime" : "Monthly",
+                Plan = "Annual",
                 IssuedAt = issuedAt,
                 ExpiresAt = expiresAt,
                 Nonce = envelope.Nonce ?? string.Empty,
                 RawLicense = LicenseFormat.Serialize(envelope)
             };
 
-            string successMessage = isLifetime
-                ? "✦ LICENCIA DE POR VIDA ACTIVADA CON ÉXITO ✦"
-                : $"✦ LICENCIA PREMIUM ACTIVA HASTA {expiresAt:dd/MM/yyyy} ✦";
+            string successMessage = $"✦ LICENCIA ANUAL ACTIVA HASTA {expiresAt:dd/MM/yyyy} ✦";
 
             return (true, successMessage, model);
         }

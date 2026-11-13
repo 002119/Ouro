@@ -49,8 +49,8 @@ Ouro no escribe configuración ni credenciales en la carpeta de instalación.
 
 ## 📥 Descarga & Instalación
 
-1. Ve a la sección de **[Releases](https://github.com/002119/Ouro/releases)**.
-2. Descarga **`Ouro_Setup_v1.0.0.exe`** (Instalador recomendado) o **`Ouro_Portable_v1.0.0.zip`**.
+1. Ve a la sección de **[Releases](https://github.com/002119/Ouro/releases)** (o al canal `#descarga-ouro` en **SKYX Labs**).
+2. Descarga **`Ouro_Setup_v1.1.0.exe`** (Instalador recomendado) o **`Ouro_Portable_v1.1.0.zip`**.
 3. Ejecuta el instalador y sigue el asistente en pantalla.
 
 ---
@@ -84,4 +84,4 @@ nueva de revisión y conserva los instaladores y portables existentes.
 
 ---
 
-© 2026 Skyx Gaming.
+© 2026 SKYX Labs.

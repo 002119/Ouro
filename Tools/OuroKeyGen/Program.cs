@@ -52,10 +52,12 @@ namespace OuroKeyGen
                     return GenerateSelfLicenses(privateKey);
                 }
 
-                if (positional.Count >= 2)
+                if (positional.Count >= 1)
                 {
                     string hwid = NormalizeHwid(positional[0]);
-                    var (plan, days) = ParsePlan(positional[1], positional.Count >= 3 ? positional[2] : null);
+                    var (plan, days) = positional.Count >= 2 && int.TryParse(positional[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int directDays) && directDays > 10
+                        ? ("Annual", (int?)directDays)
+                        : ParsePlan(positional.Count >= 2 ? positional[1] : "1", positional.Count >= 3 ? positional[2] : null);
                     var envelope = IssueLicense(privateKey, hwid, plan, days);
 
                     string path = string.IsNullOrWhiteSpace(outputPath)
@@ -98,28 +100,19 @@ namespace OuroKeyGen
                 }
 
                 Console.WriteLine();
-                Console.WriteLine("Selecciona el tipo de licencia:");
-                Console.WriteLine("  [1] Mensual (31 días por defecto)");
-                Console.WriteLine("  [2] De por vida (Lifetime)");
+                Console.WriteLine("Plan activo: Licencia Anual (365 días por defecto)");
+                string plan = "Annual";
+                int? days = 365;
+
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.Write("Opción (1 o 2): ");
+                Console.Write("Días de validez (Enter = 365): ");
                 Console.ResetColor();
-
-                string? option = Console.ReadLine();
-                var (plan, days) = ParsePlan(option, null);
-
-                if (plan == "Monthly")
+                string? daysInput = Console.ReadLine();
+                if (!string.IsNullOrWhiteSpace(daysInput) &&
+                    int.TryParse(daysInput.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedDays) &&
+                    parsedDays > 0)
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.Write("Días de validez (Enter = 31): ");
-                    Console.ResetColor();
-                    string? daysInput = Console.ReadLine();
-                    if (!string.IsNullOrWhiteSpace(daysInput) &&
-                        int.TryParse(daysInput.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsedDays) &&
-                        parsedDays > 0)
-                    {
-                        days = parsedDays;
-                    }
+                    days = parsedDays;
                 }
 
                 string normalizedHwid = NormalizeHwid(hwid);
@@ -142,19 +135,14 @@ namespace OuroKeyGen
             string hwid = GetLocalHwid();
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("Generando licencias de prueba para este equipo...");
+            Console.WriteLine("Generando licencia anual de prueba para este equipo...");
             Console.ResetColor();
             Console.WriteLine($"HWID local: {hwid}");
 
-            var lifetime = IssueLicense(privateKey, hwid, "Lifetime", null);
-            string lifetimePath = GetDefaultOutputPath(hwid, "Lifetime");
-            SaveLicense(lifetime, lifetimePath);
-            PrintLicense(lifetime, lifetimePath);
-
-            var monthly = IssueLicense(privateKey, hwid, "Monthly", 31);
-            string monthlyPath = GetDefaultOutputPath(hwid, "Monthly");
-            SaveLicense(monthly, monthlyPath);
-            PrintLicense(monthly, monthlyPath);
+            var annual = IssueLicense(privateKey, hwid, "Annual", 365);
+            string annualPath = GetDefaultOutputPath(hwid, "Annual");
+            SaveLicense(annual, annualPath);
+            PrintLicense(annual, annualPath);
 
             return 0;
         }
@@ -207,7 +195,7 @@ namespace OuroKeyGen
             DateTimeOffset issuedAt = DateTimeOffset.UtcNow;
             DateTimeOffset? expiresAt = plan == "Lifetime"
                 ? null
-                : issuedAt.AddDays(days is > 0 ? days.Value : 31);
+                : issuedAt.AddDays(days is > 0 ? days.Value : 365);
 
             var envelope = new LicenseEnvelope
             {
@@ -382,9 +370,9 @@ namespace OuroKeyGen
 
             return option switch
             {
-                "1" or "m" or "month" or "monthly" or "mensual" => ("Monthly", days ?? 31),
-                "2" or "l" or "life" or "lifetime" or "vida" => ("Lifetime", null),
-                _ => throw new ArgumentException($"Tipo de licencia no reconocido: '{value}'. Usa 1/Monthly o 2/Lifetime.")
+                "1" or "a" or "anual" or "annual" or "m" or "month" or "monthly" or "mensual" => ("Annual", days ?? 365),
+                "2" or "l" or "life" or "lifetime" or "vida" => throw new ArgumentException("Las licencias Lifetime están deshabilitadas por ahora. Usa 1/Anual (365 días por defecto)."),
+                _ => throw new ArgumentException($"Tipo de licencia no reconocido: '{value}'. Usa 1 o Anual.")
             };
         }
 
@@ -448,8 +436,8 @@ namespace OuroKeyGen
             Console.WriteLine();
             Console.WriteLine("Uso:");
             Console.WriteLine("  OuroKeyGen.exe                              Modo interactivo");
-            Console.WriteLine("  OuroKeyGen.exe <HWID> [1|2] [días]          Emite una licencia");
-            Console.WriteLine("  OuroKeyGen.exe --self                       Licencias de prueba para este equipo");
+            Console.WriteLine("  OuroKeyGen.exe <HWID> [días]                 Emite una licencia anual (365 días por defecto)");
+            Console.WriteLine("  OuroKeyGen.exe --self                       Licencia anual de prueba para este equipo");
             Console.WriteLine("  OuroKeyGen.exe --verify <archivo.ourolic>   Verifica una licencia");
             Console.WriteLine("  OuroKeyGen.exe --check-key                  Comprueba la clave sin emitir licencias");
             Console.WriteLine();
@@ -457,7 +445,7 @@ namespace OuroKeyGen
             Console.WriteLine("  --key <ruta>    Clave privada RSA (por defecto LicensingKeys/OuroPrivateKey.xml)");
             Console.WriteLine("  --out <ruta>    Archivo .ourolic de salida");
             Console.WriteLine();
-            Console.WriteLine("Planes: 1 = Mensual, 2 = Lifetime");
+            Console.WriteLine("Plan único habilitado: Anual (365 días por defecto)");
             Console.WriteLine();
             Console.WriteLine($"Variable de entorno alternativa: {PrivateKeyEnvironmentVariable}");
         }

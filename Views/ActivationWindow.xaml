@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Ouro - Activación"
-        Height="560" Width="700"
+        Height="600" Width="700"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -11,7 +11,7 @@
 
     <Grid x:Name="RootGrid" MouseLeftButtonDown="OnWindowDrag">
         <Grid.RenderTransform>
-            <ScaleTransform x:Name="RootScale" CenterX="350" CenterY="280" ScaleX="1" ScaleY="1" />
+            <ScaleTransform x:Name="RootScale" CenterX="350" CenterY="300" ScaleX="1" ScaleY="1" />
         </Grid.RenderTransform>
 
         <!-- Orbital hairline rings + mint breathing halo -->
@@ -83,14 +83,14 @@
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,4">
                         <TextBlock Text="⚙ ACTIVACIÓN DE LICENCIA" FontWeight="Bold" FontSize="13" Foreground="{StaticResource Brush.Accent.Mint}" />
-                        <TextBlock Text=" // ACCESO PRIVADO" FontSize="11" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                        <TextBlock Text=" // SKYX LABS" FontSize="11" Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" Margin="6,0,0,0" />
                     </StackPanel>
-                    <TextBlock Text="Pega tu licencia firmada o carga el archivo .ourolic que recibiste. Queda vinculada a este equipo." FontSize="11"
+                    <TextBlock Text="1. Copia tu ID de equipo  •  2. Pídela gratis en nuestro Discord (#obtener-licencia)  •  3. Pega tu token aquí." FontSize="11"
                                Foreground="{StaticResource Brush.Text.Disabled}" HorizontalAlignment="Center" TextAlignment="Center"
-                               TextWrapping="Wrap" Margin="0,0,0,14" />
+                               TextWrapping="Wrap" Margin="0,0,0,12" />
 
                     <Border Background="{StaticResource Brush.Background.Deep}" BorderBrush="{StaticResource Brush.Border.Subtle}"
-                            BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,12">
+                            BorderThickness="1" CornerRadius="6" Padding="12,10" Margin="0,0,0,10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -109,12 +109,21 @@
                         </Grid>
                     </Border>
 
+                    <Button x:Name="BtnOpenDiscord" Style="{StaticResource Style.Button.ActionPill}"
+                            Height="32" Margin="0,0,0,12" Click="OnOpenDiscordClick"
+                            ToolTip="Abre el Discord oficial de SKYX Labs para generar tu clave gratuita de 1 año">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                            <TextBlock Text="💬 " FontSize="11" />
+                            <TextBlock Text="Obtener Clave Gratis en Discord (SKYX Labs)" FontSize="11" FontWeight="SemiBold" Foreground="{StaticResource Brush.Accent.Mint}" />
+                        </StackPanel>
+                    </Button>
+
                     <Grid Margin="0,0,0,4">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="LICENCIA (JSON O TOKEN OURO2)" FontSize="10" FontWeight="Bold"
+                        <TextBlock Text="LICENCIA (TOKEN OURO2 O JSON)" FontSize="10" FontWeight="Bold"
                                    Foreground="{StaticResource Brush.Text.Secondary}" VerticalAlignment="Center" />
                         <Button x:Name="BtnBrowseLicense" Grid.Column="1" Style="{StaticResource Style.Button.ActionPill}"
                                 Height="24" Padding="10,2" Click="OnBrowseLicenseClick">
@@ -126,7 +135,7 @@
                     </Grid>
                     <Border Background="{StaticResource Brush.Background.Deep}" BorderBrush="{StaticResource Brush.Border.Muted}"
                             BorderThickness="1" CornerRadius="6" Margin="0,0,0,12">
-                        <TextBox x:Name="TxtLicenseKey" Height="82" Background="Transparent" BorderThickness="0"
+                        <TextBox x:Name="TxtLicenseKey" Height="70" Background="Transparent" BorderThickness="0"
                                  Foreground="{StaticResource Brush.Accent.Mint}" CaretBrush="{StaticResource Brush.Accent.Mint}"
                                  FontFamily="Consolas" FontSize="10" Padding="8,6"
                                  AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
@@ -170,7 +179,7 @@
                         <Border Background="{StaticResource Brush.Accent.MintGaze}" BorderBrush="{StaticResource Brush.Accent.Mint}"
                                 BorderThickness="1" CornerRadius="8" Padding="22,12">
                             <StackPanel HorizontalAlignment="Center">
-                                <TextBlock x:Name="TxtBadgeTitle" Text="✦ LICENCIA PERMANENTE VERIFICADA ✦" FontSize="13" FontWeight="Bold"
+                                <TextBlock x:Name="TxtBadgeTitle" Text="✦ LICENCIA ANUAL VERIFICADA ✦" FontSize="13" FontWeight="Bold"
                                            Foreground="{StaticResource Brush.Accent.Mint}" HorizontalAlignment="Center" />
                                 <TextBlock x:Name="TxtBadgeSubtitle" Text="// MOTOR DE REPETICIÓN EN RAM DESBLOQUEADO" FontFamily="Consolas" FontSize="10"
                                            Foreground="{StaticResource Brush.Text.Secondary}" HorizontalAlignment="Center" Margin="0,4,0,0" />

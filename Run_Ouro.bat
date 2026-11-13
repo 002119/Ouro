@@ -1,10 +1,10 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title Ouro Replay Engine - Skyx Gaming
+title Ouro Replay Engine - SKYX Labs
 
 echo =======================================================
-echo          OURO REPLAY ENGINE - SKYX GAMING
+echo          OURO REPLAY ENGINE - SKYX LABS
 echo =======================================================
 echo.
 
