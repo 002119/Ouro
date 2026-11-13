@@ -38,12 +38,15 @@ appsettings.user.json
 .env
 Distribucion/
 
-# Local shortcuts & developer helper scripts
+# Local shortcuts, admin tools & developer helper scripts
 *.lnk
 Subir_A_GitHub.bat
+Generar_Licencias_Ouro.bat
 AUDITORIA*.md
 RESULTADOS*
 Tools/Repair-Shortcut.ps1
+Tools/OuroKeyGen/
+Tools/Protect-LicenseKeys.ps1
 
 # Discord Bot / Cloudflare Worker ops & secrets (keep local/private)
 Tools/SkyxDiscordWorker/

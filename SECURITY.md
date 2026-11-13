@@ -12,7 +12,7 @@ repositorio (`https://github.com/002119/Ouro`) antes de divulgarlo.
 
 Nunca deben incluirse en el repositorio, en un instalador ni en un artefacto portable:
 
-- `LicensingKeys/OuroPrivateKey.xml` y cualquier copia de la clave privada RSA.
+- Claves privadas RSA de emisión (`*PrivateKey.xml`) ni herramientas internas de emisión.
 - Archivos `.ourolic`, `*.pem`, `*.pfx`, `*.snk` y `.env`.
 - URLs de webhooks de Discord, tokens de API o credenciales de servicios.
 - `appsettings.local.json`, `appsettings.user.json` o configuraciones específicas de una máquina.
@@ -22,11 +22,10 @@ La configuración real del usuario se guarda en `%APPDATA%\Ouro\settings.json`.
 
 ### Clave privada de licencias
 
-La clave privada RSA-2048 (`LicensingKeys/OuroPrivateKey.xml`) es el único elemento capaz de emitir
-licencias válidas. Debe mantenerse:
+La clave privada RSA-2048 es el único elemento capaz de emitir licencias válidas. Debe mantenerse:
 
 - Fuera de git y de cualquier copia pública del proyecto.
-- Preferiblemente en un equipo offline o en un gestor de secretos.
+- Preferiblemente en un gestor de secretos o equipo controlado del administrador.
 - Con copia de seguridad cifrada.
 
 Si la clave privada se filtra:
@@ -36,16 +35,6 @@ Si la clave privada se filtra:
 3. Recompila y redistribuye el cliente.
 4. Reemite todas las licencias activas con la nueva clave privada.
 5. Considera las licencias antiguas como comprometidas.
-
-El emisor (`Tools/OuroKeyGen`) comprueba que la clave privada coincide con la pública
-embebida en el cliente antes de generar licencias, para evitar distribuir licencias inválidas.
-
-El mantenimiento local incluye `Tools/Protect-LicenseKeys.ps1`: restringe las dos
-copias conocidas de la clave al propietario real del archivo, SYSTEM y Administradores.
-No cambia la clave, su propietario ni la validez de las licencias existentes. Requiere
-permisos de administración de la ACL. `-VerifyOnly` comprueba la protección sin modificarla.
-El emisor permite `--check-key` para comprobar acceso y coincidencia sin emitir licencias.
-La exclusión de Git no sustituye esta protección del archivo local.
 
 ### Rotación del webhook de Discord
 

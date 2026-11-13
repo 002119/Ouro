@@ -27,19 +27,7 @@ Para repetir solo la revisión:
 powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Release/Test-ReleasePayload.ps1 -PayloadPath "publish/Review-FECHA-ID/Ouro"
 ```
 
-El resultado depende del Desktop Runtime .NET 8 x64. La firma de ejecutables, el
-cumplimiento completo de licencias de FFmpeg y las pruebas de instalación limpia
-siguen pendientes antes de preparar una release pública. El inventario NuGet no
-enumera exhaustivamente todas las bibliotecas internas de la compilación FFmpeg.
-
-Para proteger las claves locales sin cambiar su contenido ni el propietario:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Protect-LicenseKeys.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File Tools/Protect-LicenseKeys.ps1 -VerifyOnly
-```
-
-Este último script requiere permiso para modificar/leer ACL de las dos claves.
-Conserva acceso para su propietario real, SYSTEM y Administradores; la cuenta del
-agente no se añade. `OuroKeyGen --check-key` comprueba acceso y coincidencia con la
-clave pública sin emitir ni activar una licencia.
+El resultado depende del Desktop Runtime .NET 8 x64 (o usa `-SelfContained` para incluirlo).
+La firma de ejecutables, el cumplimiento completo de licencias de FFmpeg y las pruebas
+de instalación limpia siguen pendientes antes de preparar una release pública. El inventario
+NuGet no enumera exhaustivamente todas las bibliotecas internas de la compilación FFmpeg.

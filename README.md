@@ -19,11 +19,12 @@
 
 ## 🔐 Licencia y Activación
 
-Ouro utiliza **licencias offline firmadas con RSA-2048** y vinculadas al identificador de hardware (HWID) de tu equipo.
+Ouro utiliza **licencias anuales offline firmadas con RSA-2048** y vinculadas al identificador de hardware (HWID) de tu equipo.
 
-1. Abre Ouro. Si no hay una licencia válida, aparecerá la ventana de activación.
-2. Pega el contenido de tu licencia (JSON o token `OURO2`) o pulsa **Cargar archivo** y selecciona el `.ourolic` que recibiste.
-3. La licencia queda guardada en `%APPDATA%\Ouro\license.ourolic`.
+1. Únete al Discord oficial de **SKYX Labs**: **https://discord.gg/kB4uTYBRqD**
+2. Acepta las reglas y verifícate en `#verificate`.
+3. Abre Ouro para copiar tu **HWID**, solicita tu licencia gratuita de **1 año** en `#obtener-licencia` y pégala en Ouro (`VALIDAR LICENCIA`).
+4. La licencia queda guardada en `%APPDATA%\Ouro\license.ourolic`.
 
 Notas:
 
